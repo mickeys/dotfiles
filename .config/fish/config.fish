@@ -6,15 +6,27 @@ set -Ux LSCOLORS BxfxCxDxCxexexabagacad
 # Path
 set -gx PATH ~/.rbenv/bin ~/bin $PATH
 
-# Path to Oh My Fish install.
-set -gx OMF_PATH "/Users/msattler/.local/share/omf"
+# ------
 
-# Customize Oh My Fish configuration path.
-#set -gx OMF_CONFIG "/Users/msattler/.config/omf"
+# Path to your oh-my-fish.
+set -g OMF_PATH $HOME/.local/share/omf
+
+# Path to your oh-my-fish configuration.
+set -g OMF_CONFIG $HOME/.config/omf
+
+### Configuration required to load oh-my-fish ###
+# Note: Only add configurations that are required to be set before
+# oh-my-fish is loaded. For common configurations, we advise you to
+# add them to your $OMF_CONFIG/init.fish file or to create a custom
+# plugin instead.
+set -gx Z_SCRIPT_PATH /usr/local/etc/profile.d/z.sh
 
 # Load oh-my-fish configuration.
-#########source $OMF_PATH/init.fish
+source $OMF_PATH/init.fish
+
 set -g -x fish_greeting ''
+
+#-------
 
 # Paths to your tackle
 set tacklebox_path ~/.tackle ~/.tacklebox
@@ -47,9 +59,14 @@ alias jki	"bundle exec jekyll serve --incremental --drafts"
 alias jkp	"bundle exec jekyll serve --profile --drafts"
 alias jks-prod "jekyll serve --detach"
 alias jkg	"ps aux | grep jekyll"
+alias kurl	"curl -#0 $argv"
+#
+# fish ignore ~/.bash_history
+#
 alias la	"ls -lahG $argv"
 alias ls	"command ls -hG $argv"
 alias lsd	"ls -d */"
+alias pd	"pushd"
 alias reload "source ~/.config/fish/config.fish"
 alias tw	"open -a "TextWrangler.app" $argv"
 
