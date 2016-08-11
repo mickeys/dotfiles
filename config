@@ -1,0 +1,8 @@
+Host *
+	KeepAlive yes
+	ServerAliveInterval 5
+	ServerAliveCountMax 120
+
+Host cb
+    HostName s513372989.onlinehome.us
+    User u76141767

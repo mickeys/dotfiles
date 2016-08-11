@@ -1,4 +1,4 @@
-# 1.1.34 michael
+# 1.1.35 michael
 # -----------------------------------------------------------------------------
 # This is my .bash_profile, a run-commands file, consumed by the bash shell at
 # start-up. This class of file allows for storing customization for repeating.
@@ -43,10 +43,10 @@ WIFIS=( H1 H2 W1 W2 )
 # Here's the mundane $PATH changes; further additions are pushed in front of
 # the path, to be found first.
 # -----------------------------------------------------------------------------
-PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
-PATH=/Library/Frameworks/Python.framework/Versions/3.2/bin:$PATH
-PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
+PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
 
 # -----------------------------------------------------------------------------
 # Below you'll find functions which determine and do customization based upon
@@ -236,7 +236,7 @@ doOsSpecifics() {
 		# =====================================================================
 		Darwin)										# Mac OS X
 
-			alias dnsf='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
+			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
 
 			alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
 
@@ -281,6 +281,7 @@ doOsSpecifics() {
 			alias cd..="cd .."
 			alias e="exit"
 			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+			alias gs='git status'
 			alias kurl='curl -#O'			# download and save w orig filename
 			alias lastmaint="ls -al /var/log/*.out"	# when did we last tidy up?
 			alias ll='ls -lAhF'				# ls w kb, mb, gb
@@ -301,10 +302,13 @@ doOsSpecifics() {
 			alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
 			alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
 
-			# Zipcar
-export ANDROID_HOME=~/Library/Android/sdk
-export PATH=$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools:$PATH
-			;;
+			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+			if [[ "$POWERLINE_PATH" != "" ]]; then
+				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
+			else
+				setTermPrompt
+			fi
+  			;;
 
 		# =====================================================================
 		Linux)
@@ -497,23 +501,21 @@ doArchSpecifics								# do architecture-specifics
 doOsSpecifics								# do OS-specifics
 doLocationThingsIfNotExcluded				# do location-specifics
 setTermColors								# set terminal colors
-setTermPrompt								# set the shell prompt
+#setTermPrompt								# set the shell prompt
+
+# -----------------------------------------------------------------------------
+# Zipcar stuff
+# -----------------------------------------------------------------------------
+if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
+source ~/.profile							# for rvm
+#source $HOME/.bash_profile_zipcar			# zipcar-specific dev resources
+
+export ANDROID_HOME=~/Library/Android/sdk
+export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 
 # -----------------------------------------------------------------------------
 # Set the MANPATH & the all-important PATH
 # -----------------------------------------------------------------------------
 export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
-
 PATH=~/bin:$PATH							# find my stuff first
 export PATH									# share and enjoy!
-if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
-#[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
-source ~/.profile # for rvm
-
-# Setting PATH for Python 3.4
-# The orginal version is saved in .bash_profile.pysave
-PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
-export PATH
-source $HOME/.bash_profile_zipcar
-
-eval "$(rbenv init -)"

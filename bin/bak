@@ -1,0 +1,15 @@
+#!/bin/bash
+# copy $1 to $1.bak
+
+bn=`basename $0`
+dn=`dirname $0`
+
+# sanity-checking
+if [ ! "$1" ] ; then echo "usage: $bn filespec"; exit; fi
+if [ ! -w $dn ] ; then echo "$0: fatal: \"$dn\" not writable; quitting."; exit 1; fi
+
+# do it
+cp -i "$1" "$1.bak"
+
+# error-checking / clean-up
+if [ $? != 0 ] ; then echo "$bn: error occured; check for explanation above."; exit 1; fi
