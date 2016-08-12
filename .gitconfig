@@ -4,7 +4,7 @@
 	required = true
 [user]
 	name = Michael Sattler
-	email = msattler@zipcar.com
+	email = michael@sattlers.org
 [push]
 	default = simple
 [core]
