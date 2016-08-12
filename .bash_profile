@@ -1,7 +1,8 @@
-# 1.1.35 michael
 # -----------------------------------------------------------------------------
 # This is my .bash_profile, a run-commands file, consumed by the bash shell at
 # start-up. This class of file allows for storing customization for repeating.
+#
+# https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -43,7 +44,7 @@ WIFIS=( H1 H2 W1 W2 )
 # Here's the mundane $PATH changes; further additions are pushed in front of
 # the path, to be found first.
 # -----------------------------------------------------------------------------
-PATH="/Library/Frameworks/Python.framework/Versions/3.4/bin:${PATH}"
+PATH=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
@@ -281,7 +282,16 @@ doOsSpecifics() {
 			alias cd..="cd .."
 			alias e="exit"
 			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+
+			# git
+			git_add() { git add $1\ ; }
+			alias ga=git_add
+			git_commit() { git commit -m \"$1\" ; }
+			alias gc=git_commit
+			alias gl='git log'
 			alias gs='git status'
+			alias gp='git push -u origin master'
+
 			alias kurl='curl -#O'			# download and save w orig filename
 			alias lastmaint="ls -al /var/log/*.out"	# when did we last tidy up?
 			alias ll='ls -lAhF'				# ls w kb, mb, gb
@@ -478,7 +488,7 @@ setTermPrompt() {
 # -----------------------------------------------------------------------------
 alias cpbash='scp .bash_profile USERNAME_OVER_THERE@HOSTNAME:'
 alias pd='pushd'							# see also 'popd'
-alias python="python3"						# p3 libs incompat with p2
+#alias python="python3"						# p3 libs incompat with p2
 alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
 alias sink='sync;sync;sync'					# write filesystem changes
 alias vi='vim'								# colored vi editor
