@@ -40,4 +40,6 @@ Pictures/
 Public/
 xaaid_rsa
 id_rsa.pub
-.tackle .tacklebox
+.tackle/
+.tacklebox/
+id_rsa
