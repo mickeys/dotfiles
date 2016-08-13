@@ -40,14 +40,42 @@ W1=( $AT_WORK 'Splunk' )
 W2=( $AT_WORK 'Splunk-Guest' )
 WIFIS=( H1 H2 W1 W2 )
 
+trap cleanupWhenDone EXIT		# do this function on signal EXIT
+
+function cleanupWhenDone {
+	cleanPath					# remove duplicate entries from $PATH
+}
+
+function cleanPath {
+echo "before \"$PATH\""
+	if [ -n "$PATH" ]; then
+	  old_PATH=$PATH:; PATH=
+	  while [ -n "$old_PATH" ]; do
+		x=${old_PATH%%:*}		# the first remaining entry
+		case $PATH: in
+		  *:"$x":*) ;;			# already there
+		  *) PATH=$PATH:$x;;    # not there yet
+		esac
+		old_PATH=${old_PATH#*:}
+	  done
+	  PATH=${PATH#:}
+	  unset old_PATH x
+	fi
+echo "after \"$PATH\""
+}
+
+
 # -----------------------------------------------------------------------------
 # Here's the mundane $PATH changes; further additions are pushed in front of
 # the path, to be found first.
 # -----------------------------------------------------------------------------
-PATH=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
+#echo "path at the beginning \"$PATH\""
+#PATH=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
+echo "path at the beginning \"$PATH\""
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
+#echo "path at the end \"$PATH\""
 
 # -----------------------------------------------------------------------------
 # Below you'll find functions which determine and do customization based upon
@@ -91,7 +119,6 @@ echo "doLocByDns(): DNS_RESULTS \"$DNS_RESULTS\""
 		fi
 	done
 
-
 	# =================================================================
 	# Issue commands below based upon where you've been located.
 	# =================================================================
@@ -116,8 +143,6 @@ echo "doLocByDns(): DNS_RESULTS \"$DNS_RESULTS\""
 # =============================================================================
 doLocByWifi() {
 	# =========================================================================
-	# sudo ln -s /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport /usr/sbin/airport
-	#
 	# airport arguments:
 	#	change channel (-c)
 	#	disconnect (-z)
@@ -126,18 +151,11 @@ doLocByWifi() {
 	#
 	# Also see networksetup :-)
 	# =========================================================================
-	AIRP=`airport -I | grep "\bSSID" | sed -e 's/^.*SSID: //'`
-	for element in ${WIFIS[@]}				# go through nested array
-	do
-		the_loc="`eval echo \\\${$element[0]}`"
-		the_net="`eval echo \\\${$element[1]}`"
-		if [[ "$the_net" == "$AIRP" ]] ; then
-			my_loc="$the_loc"				# remember our location for case
-			echo "WIFI: $my_loc"
-			break							# stop looping after a match
-		fi
-	done
+a="cat"
 } # end of doLocByWifi
+
+
+
 
 # =============================================================================
 # * guessing location by time-of-day (at work during daytime)
@@ -232,10 +250,10 @@ doArchSpecifics() {
 # Do OS-specific things.
 # =============================================================================
 doOsSpecifics() {
-	unameStr=$(uname)								# get OS name and
+	unameStr=${OSTYPE//[0-9.]/}						# get OS name and
 	case "$unameStr" in								# do OS-appropriate things
 		# =====================================================================
-		Darwin)										# Mac OS X
+		darwin)										# Mac OS X
 
 			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
 
@@ -328,7 +346,7 @@ doOsSpecifics() {
 			;;
 
 		# =====================================================================
-		*) echo "NOTE: Unknown operating system \"unamestr\"!" ;;
+		*) echo "NOTE: Unknown operating system \"$unameStr\"!" ;;
 	esac
 } # end doOsSpecifics
 
@@ -529,3 +547,5 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
 PATH=~/bin:$PATH							# find my stuff first
 export PATH									# share and enjoy!
+
+cleanPath
