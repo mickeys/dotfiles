@@ -40,14 +40,10 @@ W1=( $AT_WORK 'Splunk' )
 W2=( $AT_WORK 'Splunk-Guest' )
 WIFIS=( H1 H2 W1 W2 )
 
-trap cleanupWhenDone EXIT		# do this function on signal EXIT
-
-function cleanupWhenDone {
-	cleanPath					# remove duplicate entries from $PATH
-}
-
+# =============================================================================
+# Remove duplicate entries from $PATH
+# =============================================================================
 function cleanPath {
-echo "before \"$PATH\""
 	if [ -n "$PATH" ]; then
 	  old_PATH=$PATH:; PATH=
 	  while [ -n "$old_PATH" ]; do
@@ -61,21 +57,20 @@ echo "before \"$PATH\""
 	  PATH=${PATH#:}
 	  unset old_PATH x
 	fi
-echo "after \"$PATH\""
 }
-
 
 # -----------------------------------------------------------------------------
 # Here's the mundane $PATH changes; further additions are pushed in front of
 # the path, to be found first.
 # -----------------------------------------------------------------------------
-#echo "path at the beginning \"$PATH\""
-#PATH=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
+PY_BIN=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
+if [[ -f "$PY_BIN" ]] ; then
+	PATH="$PATH:$PY_BIN"
+fi
 echo "path at the beginning \"$PATH\""
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
-#echo "path at the end \"$PATH\""
 
 # -----------------------------------------------------------------------------
 # Below you'll find functions which determine and do customization based upon
