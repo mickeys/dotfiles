@@ -1,49 +1,90 @@
 # -----------------------------------------------------------------------------
-# This is my .bash_profile, a run-commands file, consumed by the bash shell at
-# start-up. This class of file allows for storing customization for repeating.
+# My customizations I've made to my UN*X shell, a project that started sometime
+# in the 1980s and has followed me around since. I use the computer as a
+# technical writer, programmer, engineering manager, and family guy. My working
+# environment needs to help me out in all these areas.
 #
-# https://github.com/mickeys/dotfiles/blob/master/.bash_profile
+# This script lets you customize your computer through the following functions:
+#
+# +-------------------+-------------------------------------------------------+
+# |     FUNCTION      | Customises your computer's environment based upon:    |
+# +-------------------+-------------------------------------------------------+
+# | doLocByDNS()      | DNS name ~ our_computer.your_cable_company.com        |
+# | doLocByWifi()     | Wi-Fi name ~ "My Home Network"                        |
+# | doLocByDateTime() | time of day, weekday or weekend                       |
+# | doArchSpecifics() | machine chipset architecture ~ x86, arm               |
+# | doOsSpecifics()   | operating system ~ darwin (macOS), linux, windows     |
+# | doHostThings()    | hostname ~ "My MacBook Pro"                           |
+# +-------------------+-------------------------------------------------------+
+#
+# Additionally, this script runs:
+# 
+# +-------------------+-------------------------------------------------------+
+# | setTermColors()   | use color terminal capabilities                       |
+# | setTermPrompt()   | sets the terminal prompt                              |
+# +-------------------+-------------------------------------------------------+
+# 
+# Then, at the bottom, is a section with all the "universal" customizations,
+# including a long list of command aliases, grouped by software package. These
+# make working at the command-line much faster and easier.
+# 
+# Lastly, tweaks to the command search path are done.
+# 
+# I'll explain the configuration options in each of the sections below. Feel
+# free to use this as a jumping-off point in tweaking your own UN*X machines.
+# 
+# Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 
+DEBUG="YES"									# if [[ "$DEBUG" ]] ...
+FAIL=''										# function return code
+RUN_TESTS='YES'								# QA switch ~ never for production
+
 # -----------------------------------------------------------------------------
-# CUSTOMIZATIONS ALL LOCATED UP HERE...
+# General settings
 # -----------------------------------------------------------------------------
-LOCATION_DETERMINATION=( )	# options: DNS DATE WIFI
-SKIP_LOC_CHECK=( 'stormdev' )				# self-evident location
-WORK_STARTS=9								# time of day work starts
-WORK_ENDS=17								# time of day work ends
+findLocationTheseWays=( DATE )				# choose from DNS DATE WIFI
+skipCheckOnThese=( 'workserver' )			# self-evident location
+dayStarts=9									# time of day ~ work starts
+dayEnds=17									# time of day ~ work ends
 # -----------------------------------------------------------------------------
-#MY_WORK_DNS='splunk.com'					# work domain(s)
-## MY_HOME_DNS=''		# home domain(s) - currently comcast, too generic
-## MY_CAFE_DNS='my.favorite.cafe'			# cafe domain(s)
-## MY_OTHER_PLACE='my.other.place'			# misc domain(s)
-#DNS_LOCATIONS=(								# DNS to look for
-#	"$MY_WORK_DNS"							# look at work locations	
-#	#"$MY_HOME_DNS"								# look at home locations
+# DNS settings ~ used if specified in findLocationTheseWays() above
+# -----------------------------------------------------------------------------
+#myWorkDNS='work.com'						# work domain(s)
+myHomeDNS='comcast.com'						# home domain(s) ~ too generic
+#myCafeDNS='my.favorite.cafe'				# cafe domain(s)
+#myOtherPlace='my.other.place'				# other domain(s)
+searchTheseDNS=(							# DNS to look for
+#	"$myWorkDNS"							# look at work locations	
+	"$myHomeDNS"							# look at home locations
+)
+# -----------------------------------------------------------------------------
+# Wi-Fi settings ~ used if specified in findLocationTheseWays() above
+# -----------------------------------------------------------------------------
+#myWorkWIFI='Google Employee'				# work access point name
+#myHomeWIFI='Harmless Network Device'		# home access point name
+#myCafeWiFi='my.favorite.cafe'				# cafe access point name
+#myOtherPlace='my.other.place'				# misc access point name
+#searchTheseWiFi=(							# WIFI to look for
+#	"$myWorkWIFI"							# look at work locations	
+#	"$myHomeWIFI"							# look at home locations
 #)
-## -----------------------------------------------------------------------------
-#MY_WORK_WIFI='Splunk'						# work access point name
-#MY_HOME_WIFI='Harmless Network Device'		# home access point name
-## MY_CAFE_WIFI='my.favorite.cafe'			# cafe access point name
-## MY_OTHER_PLACE='my.other.place'			# misc access point name
-#WIFI_LOCATIONS=(							# WIFI to look for
-#	"$MY_WORK_WIFI"							# look at work locations	
-#	"$MY_HOME_WIFI"							# look at home locations
-#)
-## -----------------------------------------------------------------------------
-AT_HOME='home'
-AT_WORK='work'
-#AT_CAFE='cafe'
-H1=( $AT_HOME 'Harmless Network Device' )
-H2=( $AT_HOME 'Mostly Harmless Network Device' )
-W1=( $AT_WORK 'Splunk' )
-W2=( $AT_WORK 'Splunk-Guest' )
-WIFIS=( H1 H2 W1 W2 )
+# -----------------------------------------------------------------------------
+# Modular way to assemble a list of all the Wi-Fi locations to be checked
+# -----------------------------------------------------------------------------
+atHome='home'
+atWork='work'
+#atCafe='cafe'
+homeOne=( $atHome 'Harmless Network Device' )
+homeTwo=( $atHome 'Mostly Harmless Network Device' )
+workOne=( $atWork 'Google Employee' )
+workTwo=( $atWork 'Google Guest' )
+allMyWiFi=( homeOne homeTwo workOne workTwo )
 
 # =============================================================================
 # Remove duplicate entries from $PATH
 # =============================================================================
-function cleanPath {
+cleanPath() {
 	if [ -n "$PATH" ]; then
 	  old_PATH=$PATH:; PATH=
 	  while [ -n "$old_PATH" ]; do
@@ -67,10 +108,9 @@ PY_BIN=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,
 if [[ -f "$PY_BIN" ]] ; then
 	PATH="$PATH:$PY_BIN"
 fi
-echo "path at the beginning \"$PATH\""
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
-PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
+PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 
 # -----------------------------------------------------------------------------
 # Below you'll find functions which determine and do customization based upon
@@ -78,8 +118,8 @@ PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts PATH
 # its domain and host name. Set are the terminal colors (for readability), the
 # terminal prompt, and the PATH and MANPATH environmental variables.
 # -----------------------------------------------------------------------------
-MY_DOMAIN=''								# initialize before use
-my_loc=''									# initialize? scope?
+myDomain=''									# initialize empty before use
+myLocation=''									# initialize empty? scope?
 
 # =============================================================================
 # Location-specific things
@@ -103,35 +143,41 @@ my_loc=''									# initialize? scope?
 # =============================================================================
 # * location by the DNS services name
 # =============================================================================
-doLocByDns() {
+doLocByDNS() {
 	DNS_RESULTS="`scutil --dns`"	# get DNS info
-echo "doLocByDns(): DNS_RESULTS \"$DNS_RESULTS\""
-	for element in "${DNS_LOCATIONS[@]}"
+#	if [[ "$DEBUG" ]] ; then echo "doLocByDNS(): DNS_RESULTS \"$DNS_RESULTS\"" ; fi
+	for element in "${searchTheseDNS[@]}"
 	do
-		if [[ $element =~ "$DNS_RESULTS" ]]; then
-# xyzzy - rewrite to use nested array
-			MY_DOMAIN="$element"	# yay! found location via DNS
+echo "searchTheseDNS \"$searchTheseDNS\""
+echo "element \"$element\""
+
+		# TO-DO - rewrite to use nested array
+		if [[ "$element" =~ "$DNS_RESULTS" ]]; then
+			echo "yay found by dns"
+			myDomain="$element"	# yay! found location via DNS
+		else
+			echo "FAIL \"$searchTheseDNS\" vs element \"$element\""
 		fi
 	done
 
 	# =================================================================
 	# Issue commands below based upon where you've been located.
 	# =================================================================
-	case "$MY_DOMAIN" in
+	case "$myDomain" in
 		# =============================================================
-		"DNS: $MY_HOME_DNS")
-			echo "my home"			# do home stuff here
+		"DNS: $myHomeDNS")
+			echo "my home"		# do home stuff here
 			;;
 		# =============================================================
-		"DNS: $MY_WORK_DNS")
-			echo "my work"			# do work stuff here
+		"DNS: $myWorkDNS")
+			echo "my work"		# do work stuff here
 			;;
 		# =============================================================
 		*)
 			echo "DNS: someplace unknown (or off-network)"
 			;;
 		esac
-} # end of doLocByDns
+} # end of doLocByDNS
 
 # =============================================================================
 # * use airport command to get access point name
@@ -146,63 +192,103 @@ doLocByWifi() {
 	#
 	# Also see networksetup :-)
 	# =========================================================================
-a="cat"
+	CURRENTLY="UNUSED"						# can't have empty function?
 } # end of doLocByWifi
 
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+# Test doLocByDateTime() with a variety of inputs
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+test_doLocByDateTime() {
+	doLocByDateTime 11 5 # succeeds
+	if ! doLocByDateTime 25 8 ; then echo "test unexpectedly succeeds" ; fi
+}
 
+test_doLocByDNS() {
+	local x=1
+}
+test_doLocByWifi() {
+	local x=1
+}
+test_doArchSpecifics() {
+	local x=1
+}
+test_doOsSpecifics() {
+	local x=1
+}
+test_doHostThings() {
+	local x=1
+}
+
+
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+# Test all the things
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+test_allTheTests() {
+	test_doLocByDateTime
+}
+
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+# Run all the tests
+# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
+if [[ "$RUN_TESTS" ]] ; then test_allTheTests ; fi
 
 
 # =============================================================================
 # * guessing location by time-of-day (at work during daytime)
 # =============================================================================
 doLocByDateTime() {
-	DHOUR=`date +'%H' | sed 's/0*//'`		# 00..24 (sed strip leading zero)
-	# DHOUR=$((date +'%H')#0)				# fails to strip leading zero
-	WDAY=$(date +'%u')						# 1..7 - see constants following:
-		MONDAY=1
-		FRIDAY=6
-		SATURDAY=7
-		SUNDAY=8
+	hour=$1									# 00..24 hour of day
+	hour=${hour#0}							# strip leading zero, if present
+	day=$2									# 0..7 day of week
+
+	# sanity-check inputs before moving on
+	if ( ! ( (( $hour >= 0 )) && (( $hour <= 24 )) ) ) ; then return $FAIL ; fi
+
+	local mon=0								# compare against these constants
+	local fri=5
+	local sat=6
+	local sun=7
 
 	# =================================================================
-	if (( ( $WDAY >= $MONDAY && $WDAY <= $FRIDAY ) &&
-		( $DHOUR >= $WORK_STARTS && $DHOUR <= $WORK_ENDS ) )) ;
+	if (( ( $day >= $mon && $day <= $fri ) &&
+		( $hour >= $dayStarts && $hour <= $dayEnds ) )) ;
 	then
-		echo "DATE: work (daytime weekday)"
-		my_loc="$AT_WORK"
+		if [[ "$DEBUG" ]] ; then echo "DATE: work (daytime weekday)" ; fi
+		myLocation="$atWork"
 
 	# =================================================================
-	elif (( ( $WDAY >= $MONDAY && $WDAY <= $FRIDAY ) &&
-		( $DHOUR < $WORK_STARTS || $DHOUR > $WORK_ENDS ) )) ;
+	elif (( ( $day >= $mon && $day <= $fri ) &&
+		( $hour < $dayStarts || $hour > $dayEnds ) )) ;
 	then
-		echo "DATE: home (weekday outside of working hours)"
-		my_loc="$AT_HOME"
+		if [[ "$DEBUG" ]] ; then echo "DATE: home (weekday outside of working hours)" ; fi
+		myLocation="$atHome"
 
 	# =================================================================
-	elif (( $WDAY == SATURDAY || $WDAY == SUNDAY ))		# weekend
+	elif (( $day == sat || $day == sun ))		# weekend
 	then
-		echo "DATE: home (weekend)"
-		my_loc="$AT_HOME"
+		if [[ "$DEBUG" ]] ; then echo "DATE: home (weekend)" ; fi
+		myLocation="$atHome"
 
 	# =================================================================
 	else
-		echo "DATE: someplace unknown"
+		if [[ "$DEBUG" ]] ; then echo "DATE: someplace unknown" ; fi
 	fi
 } # end of doLocByDateTime
 
 # =============================================================================
+# Iterate over the methods chosen above and go do them.
 # =============================================================================
 doLocationThings() {
-	for element in "${LOCATION_DETERMINATION[@]}"
+	for method in "${findLocationTheseWays[@]}"
 	do
-		case "$element" in
-			DNS) doLocByDns ;;
+		case "$method" in
+			DNS) doLocByDNS ;;
 			WIFI) doLocByWifi ;;
-			DATE) doLocByDateTime ;;
+			DATE) doLocByDateTime $(date +'%H') $(date +'%u') ;;
 			*) echo "WARNING! Unknown determination method \"$element\"!" ;;
 		esac
 	done
-	#############echo "my_loc \"$my_loc\" -- make a doHomeStuff(), doWorkStuff() ??"
+	# TO-DO: echo "myLocation \"$myLocation\" -- make a doHomeStuff(), doWorkStuff() ??"
 } # end doLocationThings
 
 
@@ -211,7 +297,7 @@ doLocationThings() {
 # =============================================================================
 doLocationThingsIfNotExcluded() {
 		determineLocation=true						# default is to do check
-		for element in "${SKIP_LOC_CHECK[@]}"		# iterate over HOSTNAMEs
+		for element in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
 		do
 			if [[ $HOSTNAME =~ $element ]]; then	# if this HOSTNAME found
 				determineLocation=false				# turn off location check
@@ -252,35 +338,8 @@ doOsSpecifics() {
 
 			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
 
-			alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
-
 			# iPhone simulator is hidden for some strange reason
-#			alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
-
-			# rename-by-date and move into dated folder hierarchy
-			GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
-# exiftool - was using CreateDate but FileModifyDate actually exists
-			## exiftool recursively rename files and place into nested directory structure
-			#
-			alias er="exiftool -r '-FileName<FileModifyDate' -d %Y/%m/%Y%m%d/%Y%m%d_%H%M%S%%-c.%%le"
-			#
-			## exiftool inline (replace filenames without sorting into nested directories)
-			#
-			# era - show all tags
-			# ert - show time tags
-			# erc - rename inline with creation date
-			# eri - rename inline with modification date
-			alias era="exiftool -a -G1 -s "
-			alias ert="exiftool -time:all -a -G0:1 -s "
-			alias erc="exiftool -r '-FileName<DateTimeOriginal' -d %Y%m%d_%H%M%S%%-c.%%le"
-			alias eri="exiftool -r '-FileName<FileModifyDate' -d %Y%m%d_%H%M%S%%-c.%%le"
-			#
-			## exiftool show tabular compilation of the GPS locations (-n in decimal)
-			#
-			alias erg="exiftool -n -filename -gpslatitude -gpslongitude -T"
-			alias en="exiftool -all="
-			alias mvmd5='mv ????????????????????????????????.* /Volumes/foobar/pix/'
-			alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
+			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
 
 			# color
 			#export LS_OPTIONS='--color=auto' # make ls colorful
@@ -289,42 +348,7 @@ doOsSpecifics() {
 			export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# use these colors
 			export TERM=xterm-color			# use color-capable termcap
 
-			# general things, alphabetically
-			alias ..="cd .."
-			alias c="clear"
-			alias cd..="cd .."
-			alias e="exit"
-			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
-
-			# git
-			git_add() { git add $1\ ; }
-			alias ga=git_add
-			git_commit() { git commit -m \"$1\" ; }
-			alias gc=git_commit
-			alias gl='git log'
-			alias gs='git status'
-			alias gp='git push -u origin master'
-
-			alias kurl='curl -#O'			# download and save w orig filename
-			alias lastmaint="ls -al /var/log/*.out"	# when did we last tidy up?
-			alias ll='ls -lAhF'				# ls w kb, mb, gb
-			alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
-			alias ls="ls -F"				# ls special chars
-			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
-			alias mydate='date +%Y%m%d_%H%M%S'		# more useful for sorting
-			alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
-			alias ps='ps -creo command,pid,%cpu | head -10'
-			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
-			#alias ssh="ssh -X"				# enable X11 forwarding
-			alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
-			alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
-
-#			# Apache error logs
-			alias ta='tail /usr/local/var/log/apache2/error_log'
-
-			alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
-			alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
-
+			# use powerline and gitstatus-powerline for prompts & status lines
 			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
 			if [[ "$POWERLINE_PATH" != "" ]]; then
 				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
@@ -344,7 +368,6 @@ doOsSpecifics() {
 		*) echo "NOTE: Unknown operating system \"$unameStr\"!" ;;
 	esac
 } # end doOsSpecifics
-
 
 # =============================================================================
 # HOSTNAME-specific things
@@ -369,17 +392,10 @@ doHostThings() {
 	# Do more complicated tests to customize one way for multiple machines.
 	# =========================================================================
 	# work machine, on-line and off-line names
-	if [ "$HOSTNAME" = 'msattler.sv.splunk.com' \
+	if [ "$HOSTNAME" = 'this.machine.example.com' \
 		-o "$HOSTNAME" = 'msattler.local' ] ;
 	then
-		S_CERTS='/Users/msattler/splunk/.chef'		# where I keep certs
-
-		# =====================================================================
-		# for GIT(hub)
-		#export GIT_FULL_NAME='Michael Sattler'
-		#export GIT_EMAIL='michael@sattlers.org'
-		#export OPSCODE_USERNAME='msattler'
-		#export OPSCODE_ORGANIZATION_NAME='msattler'
+		S_CERTS='/Users/me/employer/.chef'		# where I keep Chef certs
 
 		# =====================================================================
 	fi # end (michael.local)
@@ -438,7 +454,6 @@ setTermColors() {
 	fi # end of if-terminal
 } # end setTermColors
 
-
 # =============================================================================
 # Set PROMPT, etc.
 # =============================================================================
@@ -491,10 +506,19 @@ setTermPrompt() {
 	fi # end of if-terminal
 } # end setTermPrompt
 
-
 # -----------------------------------------------------------------------------
 # This is the end of the defined functions. The following is the main body.
 # -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Run the functions defined above
+# -----------------------------------------------------------------------------
+doHostThings								# do host-specifics
+doArchSpecifics								# do architecture-specifics
+doOsSpecifics								# do OS-specifics
+doLocationThingsIfNotExcluded				# do location-specifics
+setTermColors								# set terminal colors
+setTermPrompt								# set the shell prompt
 
 # -----------------------------------------------------------------------------
 # Alias oft-used commands for all hosts, locations, etc.
@@ -516,15 +540,78 @@ HISTFILESIZE=2000							# bash(1) history file size max
 shopt -s histappend							# append, don't overwrite, history file
 shopt -s checkwinsize						# after each command check window size...
 
+
 # -----------------------------------------------------------------------------
-# Run the functions defined above
+# Exiftool and the many ways I use it
 # -----------------------------------------------------------------------------
-doHostThings								# do host-specifics
-doArchSpecifics								# do architecture-specifics
-doOsSpecifics								# do OS-specifics
-doLocationThingsIfNotExcluded				# do location-specifics
-setTermColors								# set terminal colors
-#setTermPrompt								# set the shell prompt
+# rename-by-date and move into dated folder hierarchy
+GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
+# exiftool - was using CreateDate but FileModifyDate actually exists
+## exiftool recursively rename files and place into nested directory structure
+#
+alias er="exiftool -r '-FileName<FileModifyDate' -d %Y/%m/%Y%m%d/%Y%m%d_%H%M%S%%-c.%%le"
+#
+## exiftool inline (replace filenames without sorting into nested directories)
+#
+# era - show all tags
+# ert - show time tags
+# erc - rename inline with creation date
+# eri - rename inline with modification date
+alias era="exiftool -a -G1 -s "
+alias ert="exiftool -time:all -a -G0:1 -s "
+alias erc="exiftool -r '-FileName<DateTimeOriginal' -d %Y%m%d_%H%M%S%%-c.%%le"
+alias eri="exiftool -r '-FileName<FileModifyDate' -d %Y%m%d_%H%M%S%%-c.%%le"
+#
+## exiftool show tabular compilation of the GPS locations (-n in decimal)
+#
+alias erg="exiftool -n -filename -gpslatitude -gpslongitude -T"
+alias en="exiftool -all="
+alias mvmd5='mv ????????????????????????????????.* /Volumes/foobar/pix/'
+alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
+
+# -----------------------------------------------------------------------------
+# general things, alphabetically
+# -----------------------------------------------------------------------------
+alias ..="cd .."
+alias c="clear"
+alias cd..="cd .."
+alias e="exit"
+alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+
+# -----------------------------------------------------------------------------
+# git
+# -----------------------------------------------------------------------------
+git_add() { git add $1\ ; }
+alias ga=git_add
+git_commit() { git commit -am \"$1\" ; }
+alias gc=git_commit
+alias gl='git log'
+alias gs='git status'
+alias gp='git push -u origin master'
+
+alias kurl='curl -#O'			# download and save w orig filename
+alias lastmaint="ls -al /var/log/*.out"	# when did we last tidy up?
+alias ll='ls -lAhF'				# ls w kb, mb, gb
+alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
+alias ls="ls -F"				# ls special chars
+alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+alias mydate='date +%Y%m%d_%H%M%S'		# more useful for sorting
+alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
+alias ps='ps -creo command,pid,%cpu | head -10'
+alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
+alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
+alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
+
+## Apache error logs
+alias ta='tail /usr/local/var/log/apache2/error_log'
+
+# -----------------------------------------------------------------------------
+# Seriously miscellaneous stuff that was necessary at some time :-)
+# -----------------------------------------------------------------------------
+alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
+
+alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
+alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
 
 # -----------------------------------------------------------------------------
 # Zipcar stuff
@@ -540,7 +627,6 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 # Set the MANPATH & the all-important PATH
 # -----------------------------------------------------------------------------
 export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
+cleanPath									# remove duplicates from PATH
 PATH=~/bin:$PATH							# find my stuff first
 export PATH									# share and enjoy!
-
-cleanPath
