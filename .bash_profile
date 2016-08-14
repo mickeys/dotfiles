@@ -51,7 +51,7 @@ dayEnds=17									# time of day ~ work ends
 # DNS settings ~ used if specified in findLocationTheseWays() above
 # -----------------------------------------------------------------------------
 #myWorkDNS='work.com'						# work domain(s)
-myHomeDNS='comcast.com'						# home domain(s) ~ too generic
+myHomeDNS='comcast.net'						# home domain(s) ~ too generic
 #myCafeDNS='my.favorite.cafe'				# cafe domain(s)
 #myOtherPlace='my.other.place'				# other domain(s)
 searchTheseDNS=(							# DNS to look for
@@ -144,33 +144,38 @@ myLocation=''									# initialize empty? scope?
 # * location by the DNS services name
 # =============================================================================
 doLocByDNS() {
-	DNS_RESULTS="`scutil --dns`"	# get DNS info
-#	if [[ "$DEBUG" ]] ; then echo "doLocByDNS(): DNS_RESULTS \"$DNS_RESULTS\"" ; fi
-	for element in "${searchTheseDNS[@]}"
-	do
-echo "searchTheseDNS \"$searchTheseDNS\""
-echo "element \"$element\""
+	dnsResults="$1"					# current DNS info from `scutil --dns`
+	shift							# consume the first argument
+	searchList=($@)					# "comcast.net" "apple.com"
 
+	# sanity-check inputs before moving on
+	# TO-DO: print an error message?
+	if [ -z "$dnsResults" ] || [ "${#searchList[@]}" -le 0 ] ; then return $FAIL ; fi
+
+	for fqdn in "${searchList[@]}"
+	do
 		# TO-DO - rewrite to use nested array
-		if [[ "$element" =~ "$DNS_RESULTS" ]]; then
-			echo "yay found by dns"
-			myDomain="$element"	# yay! found location via DNS
-		else
-			echo "FAIL \"$searchTheseDNS\" vs element \"$element\""
+		if [[ "$dnsResults" == *"$fqdn"* ]]; then
+			myDomain="$fqdn"		# yay! found location via DNS
+			break					# no more comparisons; break loop
 		fi
 	done
 
+	# TO-DO: instead of doing things here, set the location and have a common
+	# things-by-location area down below. I just realized that I have multiple
+	# places to do things by location. These functions should just determine
+	# location and no more. What was I thinking?
 	# =================================================================
 	# Issue commands below based upon where you've been located.
 	# =================================================================
 	case "$myDomain" in
 		# =============================================================
-		"DNS: $myHomeDNS")
-			echo "my home"		# do home stuff here
+		"$myHomeDNS")
+			echo "DNS: home"		# do home stuff here
 			;;
 		# =============================================================
-		"DNS: $myWorkDNS")
-			echo "my work"		# do work stuff here
+		"$myWorkDNS")
+			echo "DNS: work"		# do work stuff here
 			;;
 		# =============================================================
 		*)
@@ -196,42 +201,48 @@ doLocByWifi() {
 } # end of doLocByWifi
 
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-# Test doLocByDateTime() with a variety of inputs
+# Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 test_doLocByDateTime() {
 	doLocByDateTime 11 5 # succeeds
-	if ! doLocByDateTime 25 8 ; then echo "test unexpectedly succeeds" ; fi
+	if ! doLocByDateTime 25 8 ; then echo "test should have failed" ; fi
+	if ! doLocByDateTime "dog" 8 ; then echo "test should have failed" ; fi
 }
 
 test_doLocByDNS() {
-	local x=1
+	local searchDomains=( "example.com" "foobar.org" "comcast.net" )
+
+	doLocByDNS "`scutil --dns`" ${searchDomains[@]}
+	if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
 }
+
 test_doLocByWifi() {
 	local x=1
 }
+
 test_doArchSpecifics() {
 	local x=1
 }
+
 test_doOsSpecifics() {
 	local x=1
 }
+
 test_doHostThings() {
 	local x=1
-}
-
-
-# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-# Test all the things
-# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-test_allTheTests() {
-	test_doLocByDateTime
 }
 
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 # Run all the tests
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-if [[ "$RUN_TESTS" ]] ; then test_allTheTests ; fi
-
+if [[ "$RUN_TESTS" ]] ; then
+	#test_doLocByDateTime
+	test_doLocByDNS
+	test_doLocByWifi
+	test_doArchSpecifics
+	test_doOsSpecifics
+	test_doHostThings
+fi
 
 # =============================================================================
 # * guessing location by time-of-day (at work during daytime)
@@ -282,10 +293,10 @@ doLocationThings() {
 	for method in "${findLocationTheseWays[@]}"
 	do
 		case "$method" in
-			DNS) doLocByDNS ;;
+			DNS) doLocByDNS "`scutil --dns`" ${searchTheseDNS[@]} ;;
 			WIFI) doLocByWifi ;;
 			DATE) doLocByDateTime $(date +'%H') $(date +'%u') ;;
-			*) echo "WARNING! Unknown determination method \"$element\"!" ;;
+			*) echo "WARNING! Unknown determination method \"$fqdn\"!" ;;
 		esac
 	done
 	# TO-DO: echo "myLocation \"$myLocation\" -- make a doHomeStuff(), doWorkStuff() ??"
@@ -297,9 +308,9 @@ doLocationThings() {
 # =============================================================================
 doLocationThingsIfNotExcluded() {
 		determineLocation=true						# default is to do check
-		for element in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
+		for fqdn in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
 		do
-			if [[ $HOSTNAME =~ $element ]]; then	# if this HOSTNAME found
+			if [[ $HOSTNAME =~ $fqdn ]]; then	# if this HOSTNAME found
 				determineLocation=false				# turn off location check
 			fi
 		done
@@ -474,17 +485,17 @@ setTermPrompt() {
 			# production machines; high-level importance
 			reds=( '' )
 		
-			for element in "${oranges[@]}"	# check for orange machines
+			for fqdn in "${oranges[@]}"	# check for orange machines
 			do
-				if [[ $HOSTNAME =~ $element ]]; then
-					echo "orange $element"
+				if [[ $HOSTNAME =~ $fqdn ]]; then
+					echo "orange $fqdn"
 					hostColor="${YELLOW}"	# 16 colors no orange :-/
 				fi
 			done
 		
-			for element in "${reds[@]}"		# check for red machines
+			for fqdn in "${reds[@]}"		# check for red machines
 			do
-				if [[ $HOSTNAME =~ $element ]]; then
+				if [[ $HOSTNAME =~ $fqdn ]]; then
 					hostColor="${RED}"
 				fi
 			done
@@ -585,6 +596,7 @@ git_add() { git add $1\ ; }
 alias ga=git_add
 git_commit() { git commit -am \"$1\" ; }
 alias gc=git_commit
+alias gi='git check-ignore -v *'
 alias gl='git log'
 alias gs='git status'
 alias gp='git push -u origin master'

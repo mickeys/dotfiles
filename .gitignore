@@ -20,6 +20,8 @@
 .savannah/
 .scep/
 .subversion/
+.tackle/
+.tacklebox/
 .Trash/
 .viminfo
 .wget-hsts
@@ -32,6 +34,8 @@ Desktop/
 Documents/
 Downloads/
 ftdetect/
+id_rsa
+id_rsa.pub
 known_hosts
 Library/
 Movies/
@@ -39,7 +43,3 @@ Music/
 Pictures/
 Public/
 xaaid_rsa
-id_rsa.pub
-.tackle/
-.tacklebox/
-id_rsa
