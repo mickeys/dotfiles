@@ -1,3 +1,4 @@
+#!/usr/bin/env bash					# search PATH for bash ~ portable technique
 # -----------------------------------------------------------------------------
 # My customizations I've made to my UN*X shell, a project that started sometime
 # in the 1980s and has followed me around since. I use the computer as a
@@ -35,79 +36,88 @@
 # 
 # Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
-
 DEBUG="YES"									# if [[ "$DEBUG" ]] ...
-FAIL=''										# function return code
+FAIL=''										# function return code shorthand
 RUN_TESTS='YES'								# QA switch ~ never for production
+isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
+t=(	[0]=fail [1]=pass )						# (need BASH_VERSION >= 4)
+mon=0										# $(date +'%u') returns [0..7]
+fri=5										# $(date +'%u') returns [0..7]
+sat=6										# $(date +'%u') returns [0..7]
+sun=7										# $(date +'%u') returns [0..7]
 
 # -----------------------------------------------------------------------------
 # General settings
 # -----------------------------------------------------------------------------
-findLocationTheseWays=( DATE )				# choose from DNS DATE WIFI
+# Location calculations continue until a method succeeds, so order the methods
+# from most (DNS & WIFI) to least accurate (DATE); choose wisely.
+# -----------------------------------------------------------------------------
+tryLocationMethods=( DNS WIFI DATE )		# choose from DNS WIFI DATE
+where=''									# final answer stored here
 skipCheckOnThese=( 'workserver' )			# self-evident location
-dayStarts=9									# time of day ~ work starts
-dayEnds=17									# time of day ~ work ends
+dayStarts=9									# time of day 0..23 ~ work starts
+dayEnds=17									# time of day 0..23 ~ work ends
+AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
+WIFI=`$AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //'`
+
 # -----------------------------------------------------------------------------
-# DNS settings ~ used if specified in findLocationTheseWays() above
+# DNS settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-#myWorkDNS='work.com'						# work domain(s)
-myHomeDNS='comcast.net'						# home domain(s) ~ too generic
-#myCafeDNS='my.favorite.cafe'				# cafe domain(s)
-#myOtherPlace='my.other.place'				# other domain(s)
-searchTheseDNS=(							# DNS to look for
-#	"$myWorkDNS"							# look at work locations	
-	"$myHomeDNS"							# look at home locations
+# myWifis[Coffee]=cafe						# how-to: add element in code
+typeset -A myDNSs							# associative array
+myDNSs=(									# (need BASH_VERSION >= 4)
+	[apple.com]=work						# compound assignment
+	[zipcar.com]=work						# left-hand side must be unique
+	[comcast.net]=home
+	[shaw.net]=home
 )
+
 # -----------------------------------------------------------------------------
-# Wi-Fi settings ~ used if specified in findLocationTheseWays() above
+# Wi-Fi settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-#myWorkWIFI='Google Employee'				# work access point name
-#myHomeWIFI='Harmless Network Device'		# home access point name
-#myCafeWiFi='my.favorite.cafe'				# cafe access point name
-#myOtherPlace='my.other.place'				# misc access point name
-#searchTheseWiFi=(							# WIFI to look for
-#	"$myWorkWIFI"							# look at work locations	
-#	"$myHomeWIFI"							# look at home locations
-#)
-# -----------------------------------------------------------------------------
-# Modular way to assemble a list of all the Wi-Fi locations to be checked
-# -----------------------------------------------------------------------------
-atHome='home'
-atWork='work'
-#atCafe='cafe'
-homeOne=( $atHome 'Harmless Network Device' )
-homeTwo=( $atHome 'Mostly Harmless Network Device' )
-workOne=( $atWork 'Google Employee' )
-workTwo=( $atWork 'Google Guest' )
-allMyWiFi=( homeOne homeTwo workOne workTwo )
+typeset -A myWifis							# associative array
+myWifis=(									# (need BASH_VERSION >= 4)
+	[Apple]=work							# compound assignment
+	[Zipcar]=work							# left-hand side must be unique
+	[bbhome]=home
+	[Winter Home]=home
+)
 
 # =============================================================================
-# Remove duplicate entries from $PATH
+# Housekeeping helper functions ~ start
 # =============================================================================
-cleanPath() {
+cleanPath() {								# remove duplicate $PATH entries
 	if [ -n "$PATH" ]; then
 	  old_PATH=$PATH:; PATH=
 	  while [ -n "$old_PATH" ]; do
-		x=${old_PATH%%:*}		# the first remaining entry
+		x=${old_PATH%%:*}					# the first remaining entry
 		case $PATH: in
-		  *:"$x":*) ;;			# already there
-		  *) PATH=$PATH:$x;;    # not there yet
+		  *:"$x":*) ;;						# already there
+		  *) PATH=$PATH:$x;;    			# not there yet
 		esac
 		old_PATH=${old_PATH#*:}
 	  done
 	  PATH=${PATH#:}
-	  unset old_PATH x
+	  unset old_PATH x						# clean up after ourselves
 	fi
 }
+
+debug() { echo "${FUNCNAME[1]}: $1" ; }		# caller function and error message
+
+# =============================================================================
+# Housekeeping helper functions ~ end
+# =============================================================================
 
 # -----------------------------------------------------------------------------
 # Here's the mundane $PATH changes; further additions are pushed in front of
 # the path, to be found first.
 # -----------------------------------------------------------------------------
-PY_BIN=`python -c 'import sys; print sys.path[1]' | sed -e 's,lib/python.*\.zip,,'`"bin"
-if [[ -f "$PY_BIN" ]] ; then
-	PATH="$PATH:$PY_BIN"
-fi
+# Ask Python to help in finding the binaries directory; then double-check. This
+# should work in environments which have multiple versions installed, as the
+# active python is queried.
+# -----------------------------------------------------------------------------
+PY_BIN=`python -c 'import sys; print sys.prefix'`'/bin'	# ask Python right spot
+if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 PATH=/opt/ImageMagick:$PATH					# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
@@ -119,7 +129,92 @@ PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 # terminal prompt, and the PATH and MANPATH environmental variables.
 # -----------------------------------------------------------------------------
 myDomain=''									# initialize empty before use
-myLocation=''									# initialize empty? scope?
+
+# =============================================================================
+# location by the DNS services name
+# =============================================================================
+doLocByDNS() {
+	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+
+	# process arguments passed into the function
+	local active="$1"						# active Wi-Fi name, passed in
+	declare -n dnss=$2						# how one passes associative arrays
+
+	# sanity-check inputs before moving on
+	if [ -z "$active" ] || [ "${#dnss[@]}" -le 0 ] ; then return $FAIL ; fi
+
+	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
+
+	for i in "${!dnss[@]}"; do				# iterate over the array of wifis
+		if [[ "$active" == *"$i"* ]]; then
+			where="${dnss[$i]}"				# remember the associated location
+			debug "$where"					# report back
+			return							# match found; stop working
+		fi
+     done
+} # end of doLocByDNS
+
+# =============================================================================
+# use airport command to get access point name
+# =============================================================================
+doLocByWifi() {
+	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+
+	# process arguments passed into the function
+	local active="$1"						# active Wi-Fi name, passed in
+	declare -n wifis=$2						# how one passes associative arrays
+
+	# sanity-check inputs before moving on
+	if [ -z "$active" ] ; then return $FAIL ; fi
+
+	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
+
+	for i in "${!wifis[@]}"; do				# iterate over the array of wifis
+		if [ "$i" == "$active" ] ; then		# if we found a match
+			where="${wifis[$i]}"			# remember the associated location
+			debug "$where"					# report back
+			return							# match found; stop working
+		fi
+	done
+} # end of doLocByWifi
+
+# =============================================================================
+# guessing location by time-of-day (at work during daytime)
+# =============================================================================
+doLocByDateTime() {
+	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+
+	# process arguments passed into the function
+	hour=$1									# 00..24 hour of day
+	hour=${hour#0}							# strip leading zero, if present
+	day=$2									# 0..7 day of week
+
+	# sanity-check inputs before moving on
+	if  [[ $hour =~ $isNumber ]] &&
+		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ; then return $FAIL ; fi
+
+	# -------------------------------------------------------------------------
+	if (( ( $day >= $mon && $day <= $fri ) &&
+		( $hour >= $dayStarts && $hour <= $dayEnds ) )) ;
+	then
+		debug "work (daytime weekday)"		# tell the debugging human
+		where='work'						# remember the location
+	# -------------------------------------------------------------------------
+	elif (( ( $day >= $mon && $day <= $fri ) &&
+		( $hour < $dayStarts || $hour > $dayEnds ) )) ;
+	then
+		debug "home (weekday outside of working hours)"	# tell
+		where='home'						# remember the location
+	# -------------------------------------------------------------------------
+	elif (( $day == sat || $day == sun ))
+	then
+		debug "home (weekend)"				# tell the debugging human
+		where='home'						# remember the location
+	# -------------------------------------------------------------------------
+	else
+		debug "someplace unknown"
+	fi
+} # end of doLocByDateTime
 
 # =============================================================================
 # Location-specific things
@@ -140,84 +235,25 @@ myLocation=''									# initialize empty? scope?
 # locations.
 # =============================================================================
 
-# =============================================================================
-# * location by the DNS services name
-# =============================================================================
-doLocByDNS() {
-	dnsResults="$1"					# current DNS info from `scutil --dns`
-	shift							# consume the first argument
-	searchList=($@)					# "comcast.net" "apple.com"
-
-	# sanity-check inputs before moving on
-	# TO-DO: print an error message?
-	if [ -z "$dnsResults" ] || [ "${#searchList[@]}" -le 0 ] ; then return $FAIL ; fi
-
-	for fqdn in "${searchList[@]}"
-	do
-		# TO-DO - rewrite to use nested array
-		if [[ "$dnsResults" == *"$fqdn"* ]]; then
-			myDomain="$fqdn"		# yay! found location via DNS
-			break					# no more comparisons; break loop
-		fi
-	done
-
-	# TO-DO: instead of doing things here, set the location and have a common
-	# things-by-location area down below. I just realized that I have multiple
-	# places to do things by location. These functions should just determine
-	# location and no more. What was I thinking?
-	# =================================================================
-	# Issue commands below based upon where you've been located.
-	# =================================================================
-	case "$myDomain" in
-		# =============================================================
-		"$myHomeDNS")
-			echo "DNS: home"		# do home stuff here
-			;;
-		# =============================================================
-		"$myWorkDNS")
-			echo "DNS: work"		# do work stuff here
-			;;
-		# =============================================================
-		*)
-			echo "DNS: someplace unknown (or off-network)"
-			;;
-		esac
-} # end of doLocByDNS
-
-# =============================================================================
-# * use airport command to get access point name
-# =============================================================================
-doLocByWifi() {
-	# =========================================================================
-	# airport arguments:
-	#	change channel (-c)
-	#	disconnect (-z)
-	#	get current connection info (-I)
-	#	scan for Wi-Fi networks-s
-	#
-	# Also see networksetup :-)
-	# =========================================================================
-	CURRENTLY="UNUSED"						# can't have empty function?
-} # end of doLocByWifi
-
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 # Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 test_doLocByDateTime() {
-	doLocByDateTime 11 5 # succeeds
+	doLocByDateTime 11 5
 	if ! doLocByDateTime 25 8 ; then echo "test should have failed" ; fi
 	if ! doLocByDateTime "dog" 8 ; then echo "test should have failed" ; fi
 }
 
 test_doLocByDNS() {
-	local searchDomains=( "example.com" "foobar.org" "comcast.net" )
-
-	doLocByDNS "`scutil --dns`" ${searchDomains[@]}
-	if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
+	#local searchDomains=( "example.com" "foobar.org" "comcast.net" )
+	#doLocByDNS "`scutil --dns`" ${searchDomains[@]}
+	doLocByDNS "`scutil --dns`" myDNSs
+	#if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
 }
 
 test_doLocByWifi() {
-	local x=1
+	doLocByWifi "$WIFI" myWifis
+#	if ! doLocByWifi '' myWifis ; then echo "test should have failed" ; fi
 }
 
 test_doArchSpecifics() {
@@ -236,90 +272,49 @@ test_doHostThings() {
 # Run all the tests
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 if [[ "$RUN_TESTS" ]] ; then
-	#test_doLocByDateTime
-	test_doLocByDNS
-	test_doLocByWifi
+	echo "$(date +'%H:%M:%S') ~ tests begin"
+	test_doLocByDateTime
+# TO-DO: check that we're passing these arguments down to the actual functions
+	test_doLocByDNS "`scutil --dns`" myDNSs
+	test_doLocByWifi "$WIFI" myWifis
 	test_doArchSpecifics
 	test_doOsSpecifics
 	test_doHostThings
+	echo "$(date +'%H:%M:%S') ~ tests end"
 fi
 
 # =============================================================================
-# * guessing location by time-of-day (at work during daytime)
+# Iterate over the methods chosen above & try to figure our location with them.
 # =============================================================================
-doLocByDateTime() {
-	hour=$1									# 00..24 hour of day
-	hour=${hour#0}							# strip leading zero, if present
-	day=$2									# 0..7 day of week
-
-	# sanity-check inputs before moving on
-	if ( ! ( (( $hour >= 0 )) && (( $hour <= 24 )) ) ) ; then return $FAIL ; fi
-
-	local mon=0								# compare against these constants
-	local fri=5
-	local sat=6
-	local sun=7
-
-	# =================================================================
-	if (( ( $day >= $mon && $day <= $fri ) &&
-		( $hour >= $dayStarts && $hour <= $dayEnds ) )) ;
-	then
-		if [[ "$DEBUG" ]] ; then echo "DATE: work (daytime weekday)" ; fi
-		myLocation="$atWork"
-
-	# =================================================================
-	elif (( ( $day >= $mon && $day <= $fri ) &&
-		( $hour < $dayStarts || $hour > $dayEnds ) )) ;
-	then
-		if [[ "$DEBUG" ]] ; then echo "DATE: home (weekday outside of working hours)" ; fi
-		myLocation="$atHome"
-
-	# =================================================================
-	elif (( $day == sat || $day == sun ))		# weekend
-	then
-		if [[ "$DEBUG" ]] ; then echo "DATE: home (weekend)" ; fi
-		myLocation="$atHome"
-
-	# =================================================================
-	else
-		if [[ "$DEBUG" ]] ; then echo "DATE: someplace unknown" ; fi
-	fi
-} # end of doLocByDateTime
-
-# =============================================================================
-# Iterate over the methods chosen above and go do them.
-# =============================================================================
-doLocationThings() {
-	for method in "${findLocationTheseWays[@]}"
+determineLocation() {
+	for method in "${tryLocationMethods[@]}"
 	do
 		case "$method" in
-			DNS) doLocByDNS "`scutil --dns`" ${searchTheseDNS[@]} ;;
-			WIFI) doLocByWifi ;;
+			DNS) doLocByDNS "`scutil --dns`" myDNSs ;;
+			WIFI) doLocByWifi "$WIFI" myWifis ;;
 			DATE) doLocByDateTime $(date +'%H') $(date +'%u') ;;
 			*) echo "WARNING! Unknown determination method \"$fqdn\"!" ;;
 		esac
 	done
-	# TO-DO: echo "myLocation \"$myLocation\" -- make a doHomeStuff(), doWorkStuff() ??"
-} # end doLocationThings
-
+	# TO-DO: echo "where \"$where\" -- make a doHomeStuff(), doWorkStuff() ??"
+} # end determineLocation
 
 # =============================================================================
 # Do location-specific things if machine not on exclusion list.
 # =============================================================================
-doLocationThingsIfNotExcluded() {
-		determineLocation=true						# default is to do check
-		for fqdn in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
-		do
-			if [[ $HOSTNAME =~ $fqdn ]]; then	# if this HOSTNAME found
-				determineLocation=false				# turn off location check
-			fi
-		done
-
-		if $determineLocation ; then				# check HOSTNAME result
-			doLocationThings						# do location things
+determineLocationIfNotExcluded() {
+	determineLocation=true						# default is to do check
+	for fqdn in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
+	do
+		if [[ $HOSTNAME =~ $fqdn ]]; then		# if this HOSTNAME found
+			determineLocation=false				# turn off location check
 		fi
-} # end doLocationThings
+	done
 
+	if $determineLocation ; then				# check HOSTNAME result
+		determineLocation						# do location things
+	fi
+} # end determineLocation
 
 # =============================================================================
 # Do architecture-specific things.
@@ -336,7 +331,6 @@ doArchSpecifics() {
 		;;
 	esac # end archStr
 }
-
 
 # =============================================================================
 # Do OS-specific things.
@@ -517,32 +511,18 @@ setTermPrompt() {
 	fi # end of if-terminal
 } # end setTermPrompt
 
-# -----------------------------------------------------------------------------
-# This is the end of the defined functions. The following is the main body.
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# Run the functions defined above
-# -----------------------------------------------------------------------------
+# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
+# <<---|  The end of the defined functions. Following is the main body. |---->>
+# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 doHostThings								# do host-specifics
 doArchSpecifics								# do architecture-specifics
 doOsSpecifics								# do OS-specifics
-doLocationThingsIfNotExcluded				# do location-specifics
+determineLocationIfNotExcluded				# do location-specifics
 setTermColors								# set terminal colors
 setTermPrompt								# set the shell prompt
 
 # -----------------------------------------------------------------------------
-# Alias oft-used commands for all hosts, locations, etc.
-# -----------------------------------------------------------------------------
-alias cpbash='scp .bash_profile USERNAME_OVER_THERE@HOSTNAME:'
-alias pd='pushd'							# see also 'popd'
-#alias python="python3"						# p3 libs incompat with p2
-alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
-alias sink='sync;sync;sync'					# write filesystem changes
-alias vi='vim'								# colored vi editor
-
-# -----------------------------------------------------------------------------
-# for all UN*X history
+# UN*X command history
 # -----------------------------------------------------------------------------
 alias h='history'							# see what happened before
 HISTCONTROL=ignoreboth						# bash(1) don't add dups, etc.
@@ -550,7 +530,6 @@ HISTSIZE=1000								# bash(1) history command length
 HISTFILESIZE=2000							# bash(1) history file size max
 shopt -s histappend							# append, don't overwrite, history file
 shopt -s checkwinsize						# after each command check window size...
-
 
 # -----------------------------------------------------------------------------
 # Exiftool and the many ways I use it
@@ -583,45 +562,51 @@ alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 # -----------------------------------------------------------------------------
 # general things, alphabetically
 # -----------------------------------------------------------------------------
-alias ..="cd .."
-alias c="clear"
-alias cd..="cd .."
+alias ..="cd .."							# absent-minded sys-admin :-)
+alias c="clear"								# clear the terminal screen
+alias cd..="cd .."							# I typo this all the time :-/
+alias cpbash='scp .bash_profile USERNAME_OVER_THERE@HOSTNAME:'
 alias e="exit"
 alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+alias kurl='curl -#O'						# download and save w orig filename
+alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
+alias ll='ls -lAhF'							# ls w kb, mb, gb
+alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
+alias ls="ls -F"							# ls special chars
+alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
+alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
+alias pd='pushd'							# see also 'popd'
+alias ps='ps -creo command,pid,%cpu | head -10'
+#alias python="python3"						# p3 libs incompat with p2
+alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
+alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
+alias sink='sync;sync;sync'					# write filesystem changes
+alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
+alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
+alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
+alias vi='vim'								# colored vi editor
+function xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac }
+function trash() { mv $@ ~/.Trash; }
 
 # -----------------------------------------------------------------------------
 # git
 # -----------------------------------------------------------------------------
-git_add() { git add $1\ ; }
-alias ga=git_add
-git_commit() { git commit -am \"$1\" ; }
-alias gc=git_commit
+function ga() { git add $1\ ; }
+function gc() { git commit -am $@ ; }
 alias gi='git check-ignore -v *'
 alias gl='git log'
 alias gs='git status'
 alias gp='git push -u origin master'
 
-alias kurl='curl -#O'			# download and save w orig filename
-alias lastmaint="ls -al /var/log/*.out"	# when did we last tidy up?
-alias ll='ls -lAhF'				# ls w kb, mb, gb
-alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
-alias ls="ls -F"				# ls special chars
-alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
-alias mydate='date +%Y%m%d_%H%M%S'		# more useful for sorting
-alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
-alias ps='ps -creo command,pid,%cpu | head -10'
-alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
-alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
-alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
-
-## Apache error logs
+# -----------------------------------------------------------------------------
+# error logs
+# -----------------------------------------------------------------------------
 alias ta='tail /usr/local/var/log/apache2/error_log'
 
 # -----------------------------------------------------------------------------
-# Seriously miscellaneous stuff that was necessary at some time :-)
+# seriously miscellaneous stuff that was necessary at some time :-)
 # -----------------------------------------------------------------------------
-alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
-
 alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
 alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
 
