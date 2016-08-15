@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 setTermColors() {
 	if [ -t 1 ]; then						# set colors iff stdout is terminal
-		ncolors-$(tput colors)				# ok terminal; does it do color?
+		ncolors-$( tput colors )			# ok terminal; does it do color?
 		if test -n "$ncolors" && test $ncolors -ge 8; then
 			# -----------------------------------------------------------------
 			# Color mnemonics for PS1 terminal prompt
@@ -36,12 +36,7 @@ setTermColors() {
 			# -----------------------------------------------------------------
 			# Uncomment the following to see each of the colors displayed.
 			# -----------------------------------------------------------------
-			# echo -e "\033[0;31mRED \033[1;31mLIGHT_RED \033[0;33mBROWN \
-\033[1;33mYELLOW \033[0;32mGREEN \033[1;32mLIGHT_GREEN \
-\033[0;36mCYAN \033[1;36mLIGHT_CYAN \033[0;35mPURPLE \
-\033[1;35mLIGHT_PURPLE \033[0;34mBLUE \033[1;34mLIGHT_BLUE \
-\033[0;30mBLACK \033[1;37mGRAY \033[0;37mLIGHT_GRAY \
-\033[1;37mWHITE"
+			# echo -e "\033[0;31mRED \033[1;31mLIGHT_RED \033[0;33mBROWN\033[1;33mYELLOW \033[0;32mGREEN \033[1;32mLIGHT_GREEN\033[0;36mCYAN \033[1;36mLIGHT_CYAN \033[0;35mPURPLE\033[1;35mLIGHT_PURPLE \033[0;34mBLUE \033[1;34mLIGHT_BLUE\033[0;30mBLACK \033[1;37mGRAY \033[0;37mLIGHT_GRAY\033[1;37mWHITE"
 
 		fi # end of if-terminal-supports-color
 	fi # end of if-terminal
