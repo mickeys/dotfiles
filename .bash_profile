@@ -140,6 +140,7 @@ myDomain=''									# initialize empty before use
 doLocByDNS() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 
+	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
 
 	# process arguments passed into the function
@@ -165,6 +166,9 @@ doLocByDNS() {
 # =============================================================================
 doLocByWifi() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+
+	# $2 must be an associatve array
+	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
 
 	# process arguments passed into the function
 	local active="$1"						# active Wi-Fi name, passed in
@@ -233,7 +237,7 @@ doLocByDateTime() {
 #
 # If a FQDN is properly set the following command will work, but I've
 # seen that many companies / locations don't properly set either the
-# HOSTNAME to FQDN or the domainname at all.
+# hostname to FQDN or the domainname at all.
 #
 # MYDOMAIN="`echo $HOSTNAME | rev | cut -d. -f1,2 | rev`
 #
@@ -251,8 +255,6 @@ test_doLocByDateTime() {
 }
 
 test_doLocByDNS() {
-	#local searchDomains=( "example.com" "foobar.org" "comcast.net" )
-	#doLocByDNS "`scutil --dns`" ${searchDomains[@]}
 	doLocByDNS "`scutil --dns`" myDNSs
 	if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
 }
@@ -260,18 +262,6 @@ test_doLocByDNS() {
 test_doLocByWifi() {
 	doLocByWifi "$WIFI" myWifis
 	if ! doLocByWifi '' myWifis ; then echo "test should have failed" ; fi
-}
-
-test_doArchSpecifics() {
-	local x=1
-}
-
-test_doOsSpecifics() {
-	local x=1
-}
-
-test_doHostThings() {
-	local x=1
 }
 
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
@@ -283,9 +273,6 @@ if [[ "$RUN_TESTS" ]] ; then
 # TO-DO: check that we're passing these arguments down to the actual functions
 	test_doLocByDNS "`scutil --dns`" myDNSs
 	test_doLocByWifi "$WIFI" myWifis
-	test_doArchSpecifics
-	test_doOsSpecifics
-	test_doHostThings
 	echo "$(date +'%H:%M:%S') ~ tests end"
 fi
 
@@ -309,31 +296,33 @@ determineLocation() {
 # Do location-specific things if machine not on exclusion list.
 # =============================================================================
 determineLocationIfNotExcluded() {
-	determineLocation=true						# default is to do check
-	for fqdn in "${skipCheckOnThese[@]}"		# iterate over HOSTNAMEs
+	debug "hostname \"$HOSTNAME\""
+	determineLocation=true					# default is to do check
+	for fqdn in "${skipCheckOnThese[@]}"	# iterate over hostnames
 	do
-		if [[ $HOSTNAME =~ $fqdn ]]; then		# if this HOSTNAME found
-			determineLocation=false				# turn off location check
+		if [[ "$HOSTNAME" =~ "$fqdn" ]]; then	# if this hostname found then
+			determineLocation=false			# turn off location check
 		fi
 	done
 
-	if $determineLocation ; then				# check HOSTNAME result
-		determineLocation						# do location things
+	if $determineLocation ; then			# check hostname result
+		determineLocation					# do location things
 	fi
-} # end determineLocation
+} # end determineLocationIfNotExcluded
 
 # =============================================================================
 # Do architecture-specific things.
 # =============================================================================
 doArchSpecifics() {
-	archStr=$(arch)									# get machine architecture
-	case "archStr" in								# do architecture-specifics
+	archStr=$(arch)							# get machine architecture
+	debug "machine architecture is \"$archStr\""
+	case "archStr" in						# do architecture-specifics
 		# =====================================================================
-		i386)										# including Mac
+		i386)								# including Mac
 		;;
 
 		# =====================================================================
-		arm)										# including iPhone/i$ad
+		arm)								# including iPhone/i$ad
 		;;
 	esac # end archStr
 }
@@ -342,36 +331,30 @@ doArchSpecifics() {
 # Do OS-specific things.
 # =============================================================================
 doOsSpecifics() {
-	unameStr=${OSTYPE//[0-9.]/}						# get OS name and
-	case "$unameStr" in								# do OS-appropriate things
+	unameStr=${OSTYPE//[0-9.]/}				# get OS name and
+	debug "operating system is \"$unameStr\""
+	case "$unameStr" in						# do OS-appropriate things
 		# =====================================================================
-		darwin)										# Mac OS X
+		darwin)								# Mac OS X
 
 			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
 
 			# iPhone simulator is hidden for some strange reason
 			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
 
-			# color
-			#export LS_OPTIONS='--color=auto' # make ls colorful
-			export CLICOLOR=1				# make ls colorful
-			#export LSCOLORS='Bxgxfxfxcxdxdxhbadbxbx'	# use these colors
-			export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# use these colors
-			export TERM=xterm-color			# use color-capable termcap
-
 			# use powerline and gitstatus-powerline for prompts & status lines
 			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
 			if [[ "$POWERLINE_PATH" != "" ]]; then
 				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
 			else
-				setTermPrompt
+				setTermPrompt				# else use old-school prompt
 			fi
   			;;
 
 		# =====================================================================
 		Linux)
-			alias ls='ls --color --classify'	# make ls colorful
-			today=`date "+%Y%m%d"`				# needed for logs
+			alias ls='ls --color --classify' # make ls colorful
+			today=`date "+%Y%m%d"`			# needed for logs
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
 			;;
 
@@ -381,11 +364,11 @@ doOsSpecifics() {
 } # end doOsSpecifics
 
 # =============================================================================
-# HOSTNAME-specific things
+# hostname-specific things
 # =============================================================================
 doHostThings() {
 	# =========================================================================
-	case "$HOSTNAME" in						# do HOSTNAME-specific things
+	case "$HOSTNAME" in						# do hostname-specific things
 
 		# =====================================================================
 		michael.local)						# home machine
@@ -393,11 +376,11 @@ doHostThings() {
 			alias ldups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; ../rmdups ; ls | wc -l'
 			alias mdups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; rmdups ; ls | wc -l'
 
-			# to use alias add HOSTNAMEs and users to your ~/.ssh/config
+			# to use alias add hostnames and users to your ~/.ssh/config
 			alias 11="ssh u76141767@s513372989.onlinehome.us" 	# 1and1.com
 
-		;; # end michael.local case
-	esac; # end HOSTNAME case
+		;; # end (michael.local) case
+	esac; # end $HOSTNAME case
 
 	# =========================================================================
 	# Do more complicated tests to customize one way for multiple machines.
@@ -406,7 +389,7 @@ doHostThings() {
 	if [ "$HOSTNAME" = 'this.machine.example.com' \
 		-o "$HOSTNAME" = 'msattler.local' ] ;
 	then
-		S_CERTS='/Users/me/employer/.chef'		# where I keep Chef certs
+		S_CERTS='/Users/me/employer/.chef'	# where I keep Chef certs
 
 		# =====================================================================
 	fi # end (michael.local)
@@ -418,7 +401,7 @@ doHostThings() {
 # Run add-on scripts
 # =============================================================================
 dir="${BASH_SOURCE%/*}"						# pointer to this script's location
-if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if not exist use current PWD
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use current PWD
 . "$dir/.set_prompt.sh"						# pre-powerline, set shell prompt
 
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
@@ -442,6 +425,55 @@ shopt -s histappend							# append, don't overwrite, history file
 shopt -s checkwinsize						# after each command check window size...
 
 # -----------------------------------------------------------------------------
+# general things, alphabetically
+# -----------------------------------------------------------------------------
+alias ..="cd .."							# absent-minded sys-admin :-)
+alias c="clear"								# clear the terminal screen
+alias cd..="cd .."							# I typo this all the time :-/
+alias cpbash='scp .bash_profile USERNAME_OVER_THERE@hostname:'
+alias e="exit"								# end this shell
+alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+alias kurl='curl -#O'						# download and save w orig filename
+alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
+alias ll='ls -lAhF'							# ls w kb, mb, gb
+alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
+alias ls="ls -F"							# ls special chars
+alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
+alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
+alias pd='pushd'							# see also 'popd'
+alias ps='ps -creo command,pid,%cpu | head -10'
+#alias python="python3"						# p3 libs incompat with p2
+alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
+alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
+alias sink='sync;sync;sync'					# write filesystem changes
+alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
+alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
+alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
+alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
+alias vi='vim'								# colored vi editor
+function xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac }
+function trash() { mv $@ ~/.Trash; }		# move to trash (vs deleting asap)
+
+# -----------------------------------------------------------------------------
+# terminal color
+# -----------------------------------------------------------------------------
+#export LS_OPTIONS='--color=auto'			# make ls colorful
+export CLICOLOR=1							# make ls colorful
+export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# was 'Bxgxfxfxcxdxdxhbadbxbx'
+export TERM=xterm-color						# use color-capable termcap
+
+# -----------------------------------------------------------------------------
+# git
+# -----------------------------------------------------------------------------
+function ga() { git add $1\ ; }				# add files to be tracked
+function gc() { git commit -am $@ ; }		# commit changes locally
+alias gi='git check-ignore -v *'			# see what's being ignored
+alias gl='git log'							# see what happened
+alias gs='git status'						# see what's going on
+alias gp='git push -u origin master'		# send changes upstream
+
+# -----------------------------------------------------------------------------
 # Exiftool and the many ways I use it
 # -----------------------------------------------------------------------------
 # rename-by-date and move into dated folder hierarchy
@@ -461,58 +493,11 @@ alias era="exiftool -a -G1 -s "
 alias ert="exiftool -time:all -a -G0:1 -s "
 alias erc="exiftool -r '-FileName<DateTimeOriginal' -d %Y%m%d_%H%M%S%%-c.%%le"
 alias eri="exiftool -r '-FileName<FileModifyDate' -d %Y%m%d_%H%M%S%%-c.%%le"
-#
 ## exiftool show tabular compilation of the GPS locations (-n in decimal)
-#
 alias erg="exiftool -n -filename -gpslatitude -gpslongitude -T"
 alias en="exiftool -all="
 alias mvmd5='mv ????????????????????????????????.* /Volumes/foobar/pix/'
 alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
-
-# -----------------------------------------------------------------------------
-# general things, alphabetically
-# -----------------------------------------------------------------------------
-alias ..="cd .."							# absent-minded sys-admin :-)
-alias c="clear"								# clear the terminal screen
-alias cd..="cd .."							# I typo this all the time :-/
-alias cpbash='scp .bash_profile USERNAME_OVER_THERE@HOSTNAME:'
-alias e="exit"
-alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
-alias kurl='curl -#O'						# download and save w orig filename
-alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
-alias ll='ls -lAhF'							# ls w kb, mb, gb
-alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
-alias ls="ls -F"							# ls special chars
-alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
-alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
-alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
-alias pd='pushd'							# see also 'popd'
-alias ps='ps -creo command,pid,%cpu | head -10'
-#alias python="python3"						# p3 libs incompat with p2
-alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
-alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
-alias sink='sync;sync;sync'					# write filesystem changes
-alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
-alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
-alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
-alias vi='vim'								# colored vi editor
-function xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac }
-function trash() { mv $@ ~/.Trash; }
-
-# -----------------------------------------------------------------------------
-# git
-# -----------------------------------------------------------------------------
-function ga() { git add $1\ ; }
-function gc() { git commit -am $@ ; }
-alias gi='git check-ignore -v *'
-alias gl='git log'
-alias gs='git status'
-alias gp='git push -u origin master'
-
-# -----------------------------------------------------------------------------
-# error logs
-# -----------------------------------------------------------------------------
-alias ta='tail /usr/local/var/log/apache2/error_log'
 
 # -----------------------------------------------------------------------------
 # seriously miscellaneous stuff that was necessary at some time :-)
