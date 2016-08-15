@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 setTermColors() {
 	if [ -t 1 ]; then						# set colors iff stdout is terminal
-		ncolors-$( tput colors )			# ok terminal; does it do color?
+		ncolors=$( tput colors )			# ok terminal; does it do color?
 		if test -n "$ncolors" && test $ncolors -ge 8; then
 			# -----------------------------------------------------------------
 			# Color mnemonics for PS1 terminal prompt
