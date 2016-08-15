@@ -1,4 +1,6 @@
 #!/usr/bin/env bash					# search PATH for bash ~ portable technique
+#set -u #o pipefail					# unofficial bash strict mode
+#IFS=$'\n\t'
 # -----------------------------------------------------------------------------
 # My customizations I've made to my UN*X shell, a project that started sometime
 # in the 1980s and has followed me around since. I use the computer as a
@@ -37,7 +39,8 @@
 # Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 DEBUG="YES"									# if [[ "$DEBUG" ]] ...
-FAIL=''										# function return code shorthand
+SUCCESS=0
+FAILURE=1
 RUN_TESTS='YES'								# QA switch ~ never for production
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
 t=(	[0]=fail [1]=pass )						# (need BASH_VERSION >= 4)
@@ -102,7 +105,8 @@ cleanPath() {								# remove duplicate $PATH entries
 	fi
 }
 
-debug() { echo "${FUNCNAME[1]}: $1" ; }		# caller function and error message
+# if $debug show calling function and error message
+debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
 
 # =============================================================================
 # Housekeeping helper functions ~ end
@@ -136,12 +140,14 @@ myDomain=''									# initialize empty before use
 doLocByDNS() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 
+	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
+
 	# process arguments passed into the function
 	local active="$1"						# active Wi-Fi name, passed in
 	declare -n dnss=$2						# how one passes associative arrays
 
 	# sanity-check inputs before moving on
-	if [ -z "$active" ] || [ "${#dnss[@]}" -le 0 ] ; then return $FAIL ; fi
+	if [ -z "$active" ] || [ "${#dnss[@]}" -le 0 ] ; then return $FAILURE ; fi
 
 	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
 
@@ -165,7 +171,7 @@ doLocByWifi() {
 	declare -n wifis=$2						# how one passes associative arrays
 
 	# sanity-check inputs before moving on
-	if [ -z "$active" ] ; then return $FAIL ; fi
+	if [ -z "$active" ] ; then return $FAILURE ; fi
 
 	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
 
@@ -191,7 +197,7 @@ doLocByDateTime() {
 
 	# sanity-check inputs before moving on
 	if  [[ $hour =~ $isNumber ]] &&
-		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ; then return $FAIL ; fi
+		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ; then return $FAILURE ; fi
 
 	# -------------------------------------------------------------------------
 	if (( ( $day >= $mon && $day <= $fri ) &&
@@ -248,12 +254,12 @@ test_doLocByDNS() {
 	#local searchDomains=( "example.com" "foobar.org" "comcast.net" )
 	#doLocByDNS "`scutil --dns`" ${searchDomains[@]}
 	doLocByDNS "`scutil --dns`" myDNSs
-	#if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
+	if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
 }
 
 test_doLocByWifi() {
 	doLocByWifi "$WIFI" myWifis
-#	if ! doLocByWifi '' myWifis ; then echo "test should have failed" ; fi
+	if ! doLocByWifi '' myWifis ; then echo "test should have failed" ; fi
 }
 
 test_doArchSpecifics() {
@@ -409,57 +415,6 @@ doHostThings() {
 } # end doHostThings
 
 # =============================================================================
-# Take advantage of color terminal capabilities...
-# =============================================================================
-setTermColors() {
-	if [ -t 1 ]; then						# set colors iff stdout is terminal
-		ncolors=$(tput colors)				# ok terminal; does it do color?
-		if test -n "$ncolors" && test $ncolors -ge 8; then
-			# remember this method, which seems not to work on my machine...
-			#bold="$(tput bold)"
-			#underline="$(tput smul)"
-			#standout="$(tput smso)"
-			#normal="$(tput sgr0)"
-			#black="$(tput setaf 0)"
-			#red="$(tput setaf 1)"
-			#green="$(tput setaf 2)"
-			#yellow="$(tput setaf 3)"
-			#blue="$(tput setaf 4)"
-			#magenta="$(tput setaf 5)"
-			#cyan="$(tput setaf 6)"
-			#white="$(tput setaf 7)"
-
-			# =================================================================
-			# Color mnemonics for PS1 terminal prompt
-			# =================================================================
-			export BOLD='\[\033[1m\]'
-			export BOLDOFF='\[\033[0m\]'
-			#
-			export NONE='\[\033[0m\]'
-			export WHITE='\[\033[1;37m\]'
-			export BLACK='\[\033[0;30m\]'
-			export BLUE='\[\033[0;34m\]'
-			export LIGHT_BLUE='\[\033[1;34m\]'
-			export GREEN='\[\033[0;32m\]'
-			export LIGHT_GREEN='\[\033[1;32m\]'
-			export CYAN='\[\033[0;36m\]'
-			export LIGHT_CYAN='\[\033[1;36m\]'
-			export RED='\[\033[0;31m\]'
-			export LIGHT_RED='\[\033[1;31m\]'
-			export PURPLE='\[\033[0;35m\]'
-			export LIGHT_PURPLE='\[\033[1;35m\]'
-			export BROWN='\[\033[0;33m\]'
-			export YELLOW='\[\033[1;33m\]'
-			export GRAY='\[\033[1;37m\]'
-			export LIGHT_GRAY='\[\033[0;37m\]'
-
-			###echo -e "\033[0;31mRED \033[1;31mLIGHT_RED \033[0;33mBROWN \033[1;33mYELLOW \033[0;32mGREEN \033[1;32mLIGHT_GREEN \033[0;36mCYAN \033[1;36mLIGHT_CYAN \033[0;35mPURPLE \033[1;35mLIGHT_PURPLE \033[0;34mBLUE \033[1;34mLIGHT_BLUE \033[0;30mBLACK \033[1;37mGRAY \033[0;37mLIGHT_GRAY \033[1;37mWHITE"
-
-		fi # end of if-terminal-supports-color
-	fi # end of if-terminal
-} # end setTermColors
-
-# =============================================================================
 # Run add-on scripts
 # =============================================================================
 dir="${BASH_SOURCE%/*}"						# pointer to this script's location
@@ -582,3 +537,4 @@ export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
 cleanPath									# remove duplicates from PATH
 PATH=~/bin:$PATH							# find my stuff first
 export PATH									# share and enjoy!
+#set +uo
