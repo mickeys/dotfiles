@@ -1,6 +1,8 @@
-#!/usr/bin/env bash					# search PATH for bash ~ portable technique
-#set -u #o pipefail					# unofficial bash strict mode
+#!/usr/bin/env bash							# search PATH for bash ~ portable
+#set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
+DEBUG=''									# if [[ "$DEBUG" ]] ...
+RUN_TESTS=''								# QA switch ~ never for production
 # -----------------------------------------------------------------------------
 # I've used a frightening & bewildering variety of UN*X distros since the early
 # 1980s. One thing all of them had in common was this "run-commands" file; it's
@@ -49,10 +51,8 @@
 # 
 # Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
-DEBUG="YES"									# if [[ "$DEBUG" ]] ...
 SUCCESS=0									# standard UN*X return code
 FAILURE=1									# standard UN*X return code
-RUN_TESTS='YES'								# QA switch ~ never for production
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
 myDomain=''									# initialize empty before use
 mon=0										# $(date +'%u') returns [0..7]
@@ -122,7 +122,7 @@ debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
 # world. Sadly, many companies / locations / even operating systems don't. This
 # function assembles an array of domainnames with all the techniques we know.
 # -----------------------------------------------------------------------------
-declare -a d								# array to hold domainnames we get
+declare -a d=()								# array to hold domainnames we get
 
 getDomainnames() {
 	# TO-DO: check this on a greater variety of workplaces and OSes.
@@ -146,17 +146,6 @@ getDomainnames() {
 		d[${#d[@]}]=`echo $fqdn | rev | cut -d. -f1,2 | rev`
 		# --> comcast.net
 	fi
-
-	# -------------------------------------------------------------------------
-	if [[ "$RUN_TESTS" ]] ; then			# If $RUN_TESTS output domainnames
-		if (( ${#d[@]} )) ; then			# if any domainnames found
-			__1__=1							# set a loop counter
-			for i in "${d[@]}"				# iterate over the array
-			do
-			   echo "$((__i__++)): $i"		# print one domainname
-			done
-		fi
-	fi
 }
 
 # -----------------------------------------------------------------------------
@@ -178,26 +167,27 @@ PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 # -----------------------------------------------------------------------------
 doLocByDNS() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
-
 	# $2 must be an associatve array
-	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
-
+	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return $FAILURE ; fi
 	# process arguments passed into the function
-	local active="$1"						# active Wi-Fi name, passed in
+    local domainArrayReference=$1[@]
+    local domainArray=("${!domainArrayReference}")
 	declare -n dnss=$2						# how one passes associative arrays
 
 	# sanity-check inputs before moving on
-	if [ -z "$active" ] || [ "${#dnss[@]}" -le 0 ] ; then return $FAILURE ; fi
+	if [ "${#dnss[@]}" -eq 0 ] || [ "${#domainArray[@]}" -eq 0 ] ; then return $FAILURE ; fi
 
 	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
 
-	for i in "${!dnss[@]}"; do				# iterate over the array of wifis
-		if [[ "$active" == *"$i"* ]]; then
-			where="${dnss[$i]}"				# remember the associated location
-			debug "$where"					# report back
-			return							# match found; stop working
-		fi
-     done
+	for i in "${!dnss[@]}"; do				# iterate over the array of DNSs
+		for j in "${domainArray[@]}" ; do	# iterate over domainnames found
+			if [[ "$i" == "$j"* ]]; then	# if there's a match
+				where="$i"					# remember the associated location
+				return
+			fi
+		done
+	done
+	return $FAILURE
 } # end of doLocByDNS
 
 # -----------------------------------------------------------------------------
@@ -238,6 +228,8 @@ doLocByDateTime() {
 	hour=${hour#0}							# strip leading zero, if present
 	day=$2									# 0..7 day of week
 
+	local returnCode="$SUCCESS"
+
 	# sanity-check inputs before moving on
 	if  [[ $hour =~ $isNumber ]] &&
 		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ; then return $FAILURE ; fi
@@ -261,8 +253,10 @@ doLocByDateTime() {
 		where='home'						# remember the location
 	# -------------------------------------------------------------------------
 	else
-		debug "someplace unknown"
+		debug "someplace unknown"			# no idea where we are
+		returnCode="$FAILURE"				# this is a fail
 	fi
+	return $returnCode
 } # end of doLocByDateTime
 
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
@@ -279,7 +273,7 @@ declare -A allTheTests=(					# (need BASH_VERSION >= 4)
 	['doLocByDateTime "dog" 8']="$FAILURE"
 
 	# ----- doLocByDNS --------------------------------------------------------
-	['doLocByDNS "$myDomain" myDNSs']="$SUCCESS"
+	['doLocByDNS d myDNSs']="$SUCCESS"
 	['doLocByDNS "" ""']="$FAILURE"
 
 	# ----- doLocByWifi -------------------------------------------------------
@@ -302,6 +296,7 @@ doAllTheTests() {
 	__i__=1									# just a simple counter
 	__l__=${#tests[@]}						# total number of tests
 	for c in "${!tests[@]}"; do				# iterate over the array of tests
+		# NOTE: to debug the tests you *must* put a '#' before the '>' !!!!
 		eval $c >& /dev/null				# evaluate the test command line
 		r=$?								# save the test return value
 		echo -n "$((__i__++))/$__l__ ~ "	# output "i/total" 
@@ -317,7 +312,7 @@ determineLocation() {
 	for method in "${tryLocationMethods[@]}"
 	do
 		case "$method" in
-			DNS) doLocByDNS "$myDomain" myDNSs ;;
+			DNS) doLocByDNS d myDNSs ;;
 			WIFI) doLocByWifi "$WIFI" myWifis ;;
 			DATE) doLocByDateTime $(date +'%H') $(date +'%u') ;;
 			*) echo "WARNING! Unknown determination method \"$fqdn\"!" ;;
