@@ -320,13 +320,11 @@ doAllTheTests() {
 	__i__=1									# just a simple counter
 	__l__=${#tests[@]}						# total number of tests
 	for c in "${!tests[@]}"; do				# iterate over the array of tests
-		# NOTE: to debug the tests you *must* put a '#' before the '>' !!!!
 		eval $c $SILENT						# evaluate the test command line
 		r=$?								# save the test return value
-#		echo -n "$((__i__++))/$__l__ ~ "	# output "i/total" 
-		pad $__i__ ${#__l__} -n
+		pad $__i__ ${#__l__} -n				# output number of this test
 		i=$((__i__++))						# on to next in the array
-		echo -n "/$__l__ ~ "	# output "i/total" 
+		echo -n "/$__l__ ~ "				# output total number of tests
 		passFail $r ${tests[$c]}			# output human-readable pass or fail
 		echo " ~ $c"						# output the test command line
      done
