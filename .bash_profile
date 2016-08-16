@@ -2,12 +2,23 @@
 #set -u #o pipefail					# unofficial bash strict mode
 #IFS=$'\n\t'
 # -----------------------------------------------------------------------------
-# My customizations I've made to my UN*X shell, a project that started sometime
-# in the 1980s and has followed me around since. I use the computer as a
-# technical writer, programmer, engineering manager, and family guy. My working
-# environment needs to help me out in all these areas.
+# I've used a frightening & bewildering variety of UN*X distros since the early
+# 1980s. One thing all of them had in common was this "run-commands" file; it's
+# that important to have machine-specific resources and commands configured and
+# aliased appropriately. Rather than have 40 different versions ~ yes, really:
+# there was BSD, System V, Sun OS, Solaris, GNU, AIX, Linux, and Darwin (macOS);
+# on PDP-8|10, MIPS, ARM, MC68000, SPARC; from Sun, H-P, Apple ~ crafting one
+# file to be synced to all my working computers was integral to keeping me sane.
 #
-# This script lets you customize your computer through the following functions:
+# Originally this only tested for hostname. Because I worked on many a UN*X farm
+# I added machine architecture (chipset) and operating system testing, avoiding
+# the need to specify each hostname I moved to. DNS (network identification) was
+# next, to switch between home and various client set-ups.
+#
+# Once computing became portable & mobile, I had to add tests to check for WiFi,
+# and finally location by time-of-day, in case all else failed.
+#
+# TO-DO: see if I can detect a VPN connection.
 #
 # +-------------------+-------------------------------------------------------+
 # |     FUNCTION      | Customises your computer's environment based upon:    |
@@ -39,11 +50,11 @@
 # Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 DEBUG="YES"									# if [[ "$DEBUG" ]] ...
-SUCCESS=0
-FAILURE=1
+SUCCESS=0									# standard UN*X return code
+FAILURE=1									# standard UN*X return code
 RUN_TESTS='YES'								# QA switch ~ never for production
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
-t=(	[0]=fail [1]=pass )						# (need BASH_VERSION >= 4)
+myDomain=''									# initialize empty before use
 mon=0										# $(date +'%u') returns [0..7]
 fri=5										# $(date +'%u') returns [0..7]
 sat=6										# $(date +'%u') returns [0..7]
@@ -51,9 +62,9 @@ sun=7										# $(date +'%u') returns [0..7]
 
 # -----------------------------------------------------------------------------
 # General settings
-# -----------------------------------------------------------------------------
-# Location calculations continue until a method succeeds, so order the methods
-# from most (DNS & WIFI) to least accurate (DATE); choose wisely.
+#
+# Location calculations continue until a method succeeds, so order your choices
+# in tryLocationMethods from most (DNS & WIFI) to least accurate (DATE).
 # -----------------------------------------------------------------------------
 tryLocationMethods=( DNS WIFI DATE )		# choose from DNS WIFI DATE
 where=''									# final answer stored here
@@ -67,8 +78,7 @@ WIFI=`$AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //'`
 # DNS settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
 # myWifis[Coffee]=cafe						# how-to: add element in code
-typeset -A myDNSs							# associative array
-myDNSs=(									# (need BASH_VERSION >= 4)
+declare -A myDNSs=(							# (need BASH_VERSION >= 4)
 	[apple.com]=work						# compound assignment
 	[zipcar.com]=work						# left-hand side must be unique
 	[comcast.net]=home
@@ -78,17 +88,16 @@ myDNSs=(									# (need BASH_VERSION >= 4)
 # -----------------------------------------------------------------------------
 # Wi-Fi settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-typeset -A myWifis							# associative array
-myWifis=(									# (need BASH_VERSION >= 4)
+declare -A myWifis=(						# (need BASH_VERSION >= 4)
 	[Apple]=work							# compound assignment
 	[Zipcar]=work							# left-hand side must be unique
 	[bbhome]=home
 	[Winter Home]=home
 )
 
-# =============================================================================
-# Housekeeping helper functions ~ start
-# =============================================================================
+# -----------------------------------------------------------------------------
+# Housekeeping helper functions ~ miscellaneous necessary stuff
+# -----------------------------------------------------------------------------
 cleanPath() {								# remove duplicate $PATH entries
 	if [ -n "$PATH" ]; then
 	  old_PATH=$PATH:; PATH=
@@ -108,9 +117,47 @@ cleanPath() {								# remove duplicate $PATH entries
 # if $debug show calling function and error message
 debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
 
-# =============================================================================
-# Housekeeping helper functions ~ end
-# =============================================================================
+# -----------------------------------------------------------------------------
+# All machines would have a FQDN (fully-qualified domain name) set in a perfect
+# world. Sadly, many companies / locations / even operating systems don't. This
+# function assembles an array of domainnames with all the techniques we know.
+# -----------------------------------------------------------------------------
+declare -a d								# array to hold domainnames we get
+
+getDomainnames() {
+	# TO-DO: check this on a greater variety of workplaces and OSes.
+	# -------------------------------------------------------------------------
+	# Method 1: take last two items from $HOSTNAME
+	# -------------------------------------------------------------------------
+	if [ -n "$HOSTNAME" ] ; then
+		d[${#d[@]}]=`echo $HOSTNAME | rev | cut -d. -f1,2 | rev`
+	fi
+
+	# -------------------------------------------------------------------------
+	# Method 2: get domain from your ISP
+	# -------------------------------------------------------------------------
+	if $( nc -z -w 1 google.com 80 >& /dev/null ) ; then # only if network up
+		external_ip="`dig +short myip.opendns.com @resolver1.opendns.com`"
+		# --> like 1.2.3.4
+		fqdn="`host $external_ip`"
+		# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net.
+		fqdn=${fqdn:0:${#fqdn}-1}			# strip dot from end
+		# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net
+		d[${#d[@]}]=`echo $fqdn | rev | cut -d. -f1,2 | rev`
+		# --> comcast.net
+	fi
+
+	# -------------------------------------------------------------------------
+	if [[ "$RUN_TESTS" ]] ; then			# If $RUN_TESTS output domainnames
+		if (( ${#d[@]} )) ; then			# if any domainnames found
+			__1__=1							# set a loop counter
+			for i in "${d[@]}"				# iterate over the array
+			do
+			   echo "$((__i__++)): $i"		# print one domainname
+			done
+		fi
+	fi
+}
 
 # -----------------------------------------------------------------------------
 # Here's the mundane $PATH changes; further additions are pushed in front of
@@ -127,16 +174,8 @@ PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 
 # -----------------------------------------------------------------------------
-# Below you'll find functions which determine and do customization based upon
-# your machine's "location" (by time of day & week), its operating system, and
-# its domain and host name. Set are the terminal colors (for readability), the
-# terminal prompt, and the PATH and MANPATH environmental variables.
-# -----------------------------------------------------------------------------
-myDomain=''									# initialize empty before use
-
-# =============================================================================
 # location by the DNS services name
-# =============================================================================
+# -----------------------------------------------------------------------------
 doLocByDNS() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 
@@ -161,11 +200,11 @@ doLocByDNS() {
      done
 } # end of doLocByDNS
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # use airport command to get access point name
-# =============================================================================
+# -----------------------------------------------------------------------------
 doLocByWifi() {
-	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if set, punt
 
 	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
@@ -188,9 +227,9 @@ doLocByWifi() {
 	done
 } # end of doLocByWifi
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # guessing location by time-of-day (at work during daytime)
-# =============================================================================
+# -----------------------------------------------------------------------------
 doLocByDateTime() {
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 
@@ -226,64 +265,59 @@ doLocByDateTime() {
 	fi
 } # end of doLocByDateTime
 
-# =============================================================================
-# Location-specific things
-#
-# Note: Darwin (locally) and many workplaces don't properly set the
-# domainname, so I have to use this work-around to see what network
-# to which you're currently using. If you're working at a cafe or train
-# and have no work WiFi via VPN (which I've not tested) this may not be
-# a good way of doing things. I'm still checking alternatives.
-#
-# If a FQDN is properly set the following command will work, but I've
-# seen that many companies / locations don't properly set either the
-# hostname to FQDN or the domainname at all.
-#
-# MYDOMAIN="`echo $HOSTNAME | rev | cut -d. -f1,2 | rev`
-#
-# The following is designed to be extensible to multiple work and other
-# locations.
-# =============================================================================
-
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 # Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-test_doLocByDateTime() {
-	doLocByDateTime 11 5
-	if ! doLocByDateTime 25 8 ; then echo "test should have failed" ; fi
-	if ! doLocByDateTime "dog" 8 ; then echo "test should have failed" ; fi
+
+t=(	[0]=pass [1]=fail )						# (need BASH_VERSION >= 4)
+passFail() { if (( $1 == $2 )) ; then echo -n "success" ; else echo -n "failure" ; fi }
+
+declare -A allTheTests=(					# (need BASH_VERSION >= 4)
+	# ----- doLocByDateTime ---------------------------------------------------
+	['doLocByDateTime 11 5']="$SUCCESS"
+	['doLocByDateTime 25 8']="$FAILURE"
+	['doLocByDateTime "dog" 8']="$FAILURE"
+
+	# ----- doLocByDNS --------------------------------------------------------
+	['doLocByDNS "$myDomain" myDNSs']="$SUCCESS"
+	['doLocByDNS "" ""']="$FAILURE"
+
+	# ----- doLocByWifi -------------------------------------------------------
+	['doLocByWifi "$WIFI" myWifis']="$SUCCESS"
+	['doLocByWifi "" myWifis']="$FAILURE"
+)
+
+# -----------------------------------------------------------------------------
+# Run over the array of tests, report return codes.
+# -----------------------------------------------------------------------------
+doAllTheTests() {
+	# sanity-check inputs before moving on
+	if ( ! (( ${#1} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
+
+	# process arguments passed into the function
+	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
+	declare -n tests=$1						# how one passes associative arrays
+
+	# ----- iterate over array of tests ---------------------------------------
+	__i__=1									# just a simple counter
+	__l__=${#tests[@]}						# total number of tests
+	for c in "${!tests[@]}"; do				# iterate over the array of tests
+		eval $c >& /dev/null				# evaluate the test command line
+		r=$?								# save the test return value
+		echo -n "$((__i__++))/$__l__ ~ "	# output "i/total" 
+		passFail $r ${tests[$c]}			# output human-readable pass or fail
+		echo " ~ $c"						# output the test command line
+     done
 }
 
-test_doLocByDNS() {
-	doLocByDNS "`scutil --dns`" myDNSs
-	if ! doLocByDNS '' '' ; then echo "test should have failed" ; fi
-}
-
-test_doLocByWifi() {
-	doLocByWifi "$WIFI" myWifis
-	if ! doLocByWifi '' myWifis ; then echo "test should have failed" ; fi
-}
-
-# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-# Run all the tests
-# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
-if [[ "$RUN_TESTS" ]] ; then
-	echo "$(date +'%H:%M:%S') ~ tests begin"
-	test_doLocByDateTime
-# TO-DO: check that we're passing these arguments down to the actual functions
-	test_doLocByDNS "`scutil --dns`" myDNSs
-	test_doLocByWifi "$WIFI" myWifis
-	echo "$(date +'%H:%M:%S') ~ tests end"
-fi
-
-# =============================================================================
+# -----------------------------------------------------------------------------
 # Iterate over the methods chosen above & try to figure our location with them.
-# =============================================================================
+# -----------------------------------------------------------------------------
 determineLocation() {
 	for method in "${tryLocationMethods[@]}"
 	do
 		case "$method" in
-			DNS) doLocByDNS "`scutil --dns`" myDNSs ;;
+			DNS) doLocByDNS "$myDomain" myDNSs ;;
 			WIFI) doLocByWifi "$WIFI" myWifis ;;
 			DATE) doLocByDateTime $(date +'%H') $(date +'%u') ;;
 			*) echo "WARNING! Unknown determination method \"$fqdn\"!" ;;
@@ -292,9 +326,9 @@ determineLocation() {
 	# TO-DO: echo "where \"$where\" -- make a doHomeStuff(), doWorkStuff() ??"
 } # end determineLocation
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # Do location-specific things if machine not on exclusion list.
-# =============================================================================
+# -----------------------------------------------------------------------------
 determineLocationIfNotExcluded() {
 	debug "hostname \"$HOSTNAME\""
 	determineLocation=true					# default is to do check
@@ -310,31 +344,31 @@ determineLocationIfNotExcluded() {
 	fi
 } # end determineLocationIfNotExcluded
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # Do architecture-specific things.
-# =============================================================================
+# -----------------------------------------------------------------------------
 doArchSpecifics() {
 	archStr=$(arch)							# get machine architecture
 	debug "machine architecture is \"$archStr\""
 	case "archStr" in						# do architecture-specifics
-		# =====================================================================
+		# ---------------------------------------------------------------------
 		i386)								# including Mac
 		;;
 
-		# =====================================================================
+		# ---------------------------------------------------------------------
 		arm)								# including iPhone/i$ad
 		;;
 	esac # end archStr
 }
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # Do OS-specific things.
-# =============================================================================
+# -----------------------------------------------------------------------------
 doOsSpecifics() {
 	unameStr=${OSTYPE//[0-9.]/}				# get OS name and
 	debug "operating system is \"$unameStr\""
 	case "$unameStr" in						# do OS-appropriate things
-		# =====================================================================
+		# ---------------------------------------------------------------------
 		darwin)								# Mac OS X
 
 			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
@@ -351,26 +385,27 @@ doOsSpecifics() {
 			fi
   			;;
 
-		# =====================================================================
+		# ---------------------------------------------------------------------
 		Linux)
 			alias ls='ls --color --classify' # make ls colorful
 			today=`date "+%Y%m%d"`			# needed for logs
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
 			;;
 
-		# =====================================================================
-		*) echo "NOTE: Unknown operating system \"$unameStr\"!" ;;
+		# ---------------------------------------------------------------------
+		*) echo "NOTE: Unknown operating system \"$unameStr\"!"
+		;;
 	esac
 } # end doOsSpecifics
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # hostname-specific things
-# =============================================================================
+# -----------------------------------------------------------------------------
 doHostThings() {
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	case "$HOSTNAME" in						# do hostname-specific things
 
-		# =====================================================================
+		# ---------------------------------------------------------------------
 		michael.local)						# home machine
 			# home-grown duplicate file deletion scheme ; ignore if you're not me :-)
 			alias ldups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; ../rmdups ; ls | wc -l'
@@ -382,24 +417,25 @@ doHostThings() {
 		;; # end (michael.local) case
 	esac; # end $HOSTNAME case
 
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	# Do more complicated tests to customize one way for multiple machines.
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	# work machine, on-line and off-line names
 	if [ "$HOSTNAME" = 'this.machine.example.com' \
 		-o "$HOSTNAME" = 'msattler.local' ] ;
 	then
 		S_CERTS='/Users/me/employer/.chef'	# where I keep Chef certs
 
-		# =====================================================================
+		# ---------------------------------------------------------------------
+
 	fi # end (michael.local)
 
-	# =========================================================================
+	# -------------------------------------------------------------------------
 } # end doHostThings
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # Run add-on scripts
-# =============================================================================
+# -----------------------------------------------------------------------------
 dir="${BASH_SOURCE%/*}"						# pointer to this script's location
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use current PWD
 . "$dir/.set_prompt.sh"						# pre-powerline, set shell prompt
@@ -407,12 +443,20 @@ if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use current PWD
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 # <<---|  The end of the defined functions. Following is the main body. |---->>
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
-doHostThings								# do host-specifics
-doArchSpecifics								# do architecture-specifics
-doOsSpecifics								# do OS-specifics
-determineLocationIfNotExcluded				# do location-specifics
-setTermColors								# set terminal colors
-setTermPrompt								# set the shell prompt
+
+getDomainnames								# find all the domainnames we can
+if [[ "$RUN_TESTS" ]] ; then
+	echo "$(date +'%H:%M:%S') ~ start"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
+	doAllTheTests allTheTests				# º Run all the tests             º
+	echo "$(date +'%H:%M:%S') ~ end"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
+else
+	doHostThings							# do host-specifics
+	doArchSpecifics							# do architecture-specifics
+	doOsSpecifics							# do OS-specifics
+	determineLocationIfNotExcluded			# do location-specifics
+	setTermColors							# set terminal colors
+	setTermPrompt							# set the shell prompt
+fi
 
 # -----------------------------------------------------------------------------
 # UN*X command history
