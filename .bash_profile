@@ -1,8 +1,12 @@
 #!/usr/bin/env bash							# search PATH for bash ~ portable
 #set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
-DEBUG=''									# if [[ "$DEBUG" ]] ...
-RUN_TESTS=''								# QA switch ~ never for production
+# -----------------------------------------------------------------------------
+# Uncomment the following switches to enable QA features.
+# -----------------------------------------------------------------------------
+DEBUG=1										# show debugging output
+RUN_TESTS=1									# QA switch ~ never for production
+#SILENT='>& /dev/null'						# silence command output
 # -----------------------------------------------------------------------------
 # I've used a frightening & bewildering variety of UN*X distros since the early
 # 1980s. One thing all of them had in common was this "run-commands" file; it's
@@ -98,7 +102,9 @@ declare -A myWifis=(						# (need BASH_VERSION >= 4)
 # -----------------------------------------------------------------------------
 # Housekeeping helper functions ~ miscellaneous necessary stuff
 # -----------------------------------------------------------------------------
-cleanPath() {								# remove duplicate $PATH entries
+# remove duplicate $PATH entries
+# -----------------------------------------------------------------------------
+cleanPath() {
 	if [ -n "$PATH" ]; then
 	  old_PATH=$PATH:; PATH=
 	  while [ -n "$old_PATH" ]; do
@@ -114,8 +120,21 @@ cleanPath() {								# remove duplicate $PATH entries
 	fi
 }
 
+# -----------------------------------------------------------------------------
 # if $debug show calling function and error message
+# -----------------------------------------------------------------------------
 debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
+
+# -----------------------------------------------------------------------------
+# print $1 with $2 number of digits
+# -----------------------------------------------------------------------------
+function pad {
+	local n=$1 ; local w=$2 ; local s=$3
+	expo=$((10 ** $w))
+	[ $n -gt $expo ] && { echo $n; return; }
+	fmt=$(($n + $expo))
+	echo $s ${fmt:1}
+}
 
 # -----------------------------------------------------------------------------
 # All machines would have a FQDN (fully-qualified domain name) set in a perfect
@@ -136,7 +155,7 @@ getDomainnames() {
 	# -------------------------------------------------------------------------
 	# Method 2: get domain from your ISP
 	# -------------------------------------------------------------------------
-	if $( nc -z -w 1 google.com 80 >& /dev/null ) ; then # only if network up
+	if $( eval nc -z -w 1 google.com 80 $SILENT ) ; then # only if network up
 		external_ip="`dig +short myip.opendns.com @resolver1.opendns.com`"
 		# --> like 1.2.3.4
 		fqdn="`host $external_ip`"
@@ -279,6 +298,11 @@ declare -A allTheTests=(					# (need BASH_VERSION >= 4)
 	# ----- doLocByWifi -------------------------------------------------------
 	['doLocByWifi "$WIFI" myWifis']="$SUCCESS"
 	['doLocByWifi "" myWifis']="$FAILURE"
+
+	# ----- miscellaneous -----------------------------------------------------
+	['doArchSpecifics']="$SUCCESS"
+	['doOsSpecifics']="$SUCCESS"
+	['doHostThings']="$SUCCESS"
 )
 
 # -----------------------------------------------------------------------------
@@ -297,9 +321,12 @@ doAllTheTests() {
 	__l__=${#tests[@]}						# total number of tests
 	for c in "${!tests[@]}"; do				# iterate over the array of tests
 		# NOTE: to debug the tests you *must* put a '#' before the '>' !!!!
-		eval $c >& /dev/null				# evaluate the test command line
+		eval $c $SILENT						# evaluate the test command line
 		r=$?								# save the test return value
-		echo -n "$((__i__++))/$__l__ ~ "	# output "i/total" 
+#		echo -n "$((__i__++))/$__l__ ~ "	# output "i/total" 
+		pad $__i__ ${#__l__} -n
+		i=$((__i__++))						# on to next in the array
+		echo -n "/$__l__ ~ "	# output "i/total" 
 		passFail $r ${tests[$c]}			# output human-readable pass or fail
 		echo " ~ $c"						# output the test command line
      done
@@ -362,6 +389,7 @@ doArchSpecifics() {
 doOsSpecifics() {
 	unameStr=${OSTYPE//[0-9.]/}				# get OS name and
 	debug "operating system is \"$unameStr\""
+echo  "unameStr $unameStr"
 	case "$unameStr" in						# do OS-appropriate things
 		# ---------------------------------------------------------------------
 		darwin)								# Mac OS X
@@ -373,6 +401,7 @@ doOsSpecifics() {
 
 			# use powerline and gitstatus-powerline for prompts & status lines
 			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+	echo "POWERLINE_PATH $POWERLINE_PATH"
 			if [[ "$POWERLINE_PATH" != "" ]]; then
 				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
 			else
