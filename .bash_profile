@@ -48,12 +48,16 @@
 # I'll explain the configuration options in each of the sections below. Feel
 # free to use this as a jumping-off point in tweaking your own UN*X machines.
 # 
-# Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
+# Find me at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
+# -----------------------------------------------------------------------------
+# QA NOTE: if $BASH_VERSION < v4 parts of this script will silently not execute.
+# This is a feature, not a bug. Update your bash to a modern one. This has been
+# tested mostly on macOS 10.12 (Sierra), with side-trips to several Linuxes.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# If $TEST_YOKE is anything, meaning we're being called by a test yoke, then
-# honor the environment variables set for us. Otherwise set defaults for this
+# If $TEST_YOKE is *anything*, meaning we're being called by a test yoke, then
+# we honor the environment variables set for us. Otherwise set defaults for this
 # script's behavior.
 # -----------------------------------------------------------------------------
 if [[ ! $TEST_YOKE ]] ; then				# we being invoked from outside?
@@ -71,10 +75,6 @@ if [[ $SILENT ]] ; then SILENT='>& /dev/null'	; fi # overloading
 # -----------------------------------------------------------------------------
 # Constants:
 # -----------------------------------------------------------------------------
-export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-#set -o xtrace
-#set -o nounset
-# -----------------------------------------------------------------------------
 SUCCESS=0									# standard UN*X return code
 FAILURE=1									# standard UN*X return code
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
@@ -83,6 +83,10 @@ mon=0										# $(date +'%u') returns [0..7]
 fri=5										# $(date +'%u') returns [0..7]
 sat=6										# $(date +'%u') returns [0..7]
 sun=7										# $(date +'%u') returns [0..7]
+# -----------------------------------------------------------------------------
+export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+#set -o xtrace								# debugging stuff
+#set -o nounset								# debugging stuff
 
 # -----------------------------------------------------------------------------
 # General settings
@@ -405,18 +409,30 @@ doOsSpecifics() {
 	case "$os" in							# do OS-appropriate things
 		# ---------------------------------------------------------------------
 		darwin)								# Mac OS X
-			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
+			# -----------------------------------------------------------------
+			# cd (pushd) to the macOS's foremost Finder window 
+			# -----------------------------------------------------------------
+			cdf () {
+				currFolderPath=$( /usr/bin/osascript <<EOT
+					tell application "Finder"
+						try
+					set currFolder to (folder of the front window as alias)
+						on error
+					set currFolder to (path to desktop folder as alias)
+						end try
+						POSIX path of currFolder
+					end tell
+EOT
+				)
+				pushd "$currFolderPath"		# use 'cd' if it makes you happier
+			}
+
+			# -----------------------------------------------------------------
+			#alias flush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
+			alias flush='dscacheutil -flushcache'	# flush DNS Cache
 
 			# iPhone simulator is hidden for some strange reason
 			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
-
-			# use powerline and gitstatus-powerline for prompts & status lines
-			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
-			if [[ "$POWERLINE_PATH" != "" ]]; then
-				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
-			else
-				setTermPrompt				# else use old-school prompt
-			fi
   			;;
 
 		# ---------------------------------------------------------------------
@@ -474,10 +490,21 @@ doHostThings() {
 # -----------------------------------------------------------------------------
 # Run (exceedingly optional) add-on scripts
 # -----------------------------------------------------------------------------
-dir="${BASH_SOURCE%/*}"						# point to this script's location
-if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist, use current PWD
-#. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
-#. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
+
+# -----------------------------------------------------------------------------
+# use powerline and gitstatus-powerline for prompts & status lines (or go
+# old-school on systems without it installed)
+# -----------------------------------------------------------------------------
+POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+if [[ "$POWERLINE_PATH" != "" ]]; then
+	source ${POWERLINE_PATH}/bindings/bash/powerline.sh
+else
+	dir="${BASH_SOURCE%/*}"					# point to this script's location
+	if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use PWD
+	. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
+	. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
+	setTermPrompt							# use old-school prompt
+fi
 
 # -----------------------------------------------------------------------------
 # Do command aliasing. Works on any bash version.
@@ -494,22 +521,38 @@ shopt -s histappend							# append, don't overwrite, history file
 shopt -s checkwinsize						# after each command check window size...
 
 # -----------------------------------------------------------------------------
+# other environment settings
+# -----------------------------------------------------------------------------
+export EDITOR=/usr/bin/vim					# graphic text editor of choice
+set completion-ignore-case on				# tab char => possible file endings
+
+# -----------------------------------------------------------------------------
 # general things, alphabetically
 # -----------------------------------------------------------------------------
-alias ..="cd .."							# absent-minded sys-admin :-)
 alias c="clear"								# clear the terminal screen
-alias cd..="cd .."							# I typo this all the time :-/
-alias cpbash='scp .bash_profile USERNAME_OVER_THERE@hostname:'
+alias ~="cd ~"                              # Go to the home directory
+alias cd..='cd ../'                         # Go back 1 directory level (for fast typers)
+alias ..='cd ../'                           # Go back 1 directory level
+alias ...='cd ../../'                       # Go back 2 directory levels
+alias .3='cd ../../../'                     # Go back 3 directory levels
+alias .4='cd ../../../../'                  # Go back 4 directory levels
+alias .5='cd ../../../../../'               # Go back 5 directory levels
+alias .6='cd ../../../../../../'            # Go back 6 directory levels
+#alias cpbash='scp .bash_profile USERNAME_OVER_THERE@hostname:'
 alias e="exit"								# end this shell
 alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
 alias kurl='curl -#O'						# download and save w orig filename
 alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
 alias ll='ls -lAhF'							# ls w kb, mb, gb
+# lr ~ fully-recursive directory listing
+alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | less'
 alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
 alias ls="ls -F"							# ls special chars
 alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+mcd () { mkdir -p "$1" && cd "$1"; }        # makes new dir and jump inside
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
+alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
 alias pd='pushd'							# see also 'popd'
 alias ps='ps -creo command,pid,%cpu | head -10'
 #alias python="python3"						# p3 libs incompat with p2
@@ -520,6 +563,7 @@ alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garba
 alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
 alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
 alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
+alias which='type -all'                     # find executables
 alias vi='vim'								# colored vi editor
 function xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac }
 function trash() { mv $@ ~/.Trash; }		# move to trash (vs deleting asap)
@@ -567,16 +611,71 @@ GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
 alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 
 # -----------------------------------------------------------------------------
+# less ~ the enhanced version of the 'more' page viewer
+# -----------------------------------------------------------------------------
+alias more='less'							# alias to use less
+export LC_ALL=en_US.UTF-8					# language variable to rule them all
+export LANG=en_us.UTF-8						# char set
+export PAGER=less							# tell the system to use less
+export LESSCHARSET='utf-8'					# was 'latin1'
+export LESSOPEN='|/usr/bin/lesspipe.sh %s 2>&-' # Use if lesspipe.sh exists
+export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f \
+:stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
+
+# LESS man page colors (makes Man pages more readable).
+export LESS_TERMCAP_mb=$'\E[01;31m'
+export LESS_TERMCAP_md=$'\E[01;31m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_ue=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[01;32m'
+
+# -----------------------------------------------------------------------------
+# web development
+# -----------------------------------------------------------------------------
+alias aedit='sudo edit /etc/httpd/httpd.conf'	# edit Apache httpd.conf
+alias alogs="less +F /var/log/apache2/error_log" # show apache error logs
+alias arestart='sudo apachectl graceful'	# restart Apache
+alias hostfile='sudo edit /etc/hosts'		# edit /etc/hosts file
+alias hlogs='tail /var/log/httpd/error_log'	# tail HTTP error logs
+httpdebug () { /usr/bin/curl $@ -o /dev/null -w "dns: %{time_namelookup} connect: %{time_connect} pretransfer: %{time_pretransfer} starttransfer: %{time_starttransfer} total: %{time_total}\n" ; }
+
+# -----------------------------------------------------------------------------
 # seriously miscellaneous stuff that was necessary at some time :-)
 # -----------------------------------------------------------------------------
 alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
 alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
 
+# -----------------------------------------------------------------------------
+# extract best-known archives with one command
+# -----------------------------------------------------------------------------
+extract () {
+	if [ -f $1 ] ; then
+	  case $1 in
+		*.tar.bz2)   tar xjf $1     ;;
+		*.tar.gz)    tar xzf $1     ;;
+		*.bz2)       bunzip2 $1     ;;
+		*.rar)       unrar e $1     ;;
+		*.gz)        gunzip $1      ;;
+		*.tar)       tar xf $1      ;;
+		*.tbz2)      tar xjf $1     ;;
+		*.tgz)       tar xzf $1     ;;
+		*.zip)       unzip $1       ;;
+		*.Z)         uncompress $1  ;;
+		*.7z)        7z x $1        ;;
+		*)     echo "'$1' cannot be extracted via extract()" ;;
+		 esac
+	 else
+		 echo "'$1' is not a valid file"
+	 fi
+}
+
 #TO-DO: put the following in a doHome() doWork() doElsewhere()
 # -----------------------------------------------------------------------------
 # Zipcar stuff
 # -----------------------------------------------------------------------------
-if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
+if /usr/bin/which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
 source ~/.profile							# for rvm
 #source $HOME/.bash_profile_zipcar			# zipcar-specific dev resources
 
