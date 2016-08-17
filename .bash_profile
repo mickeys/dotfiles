@@ -536,7 +536,7 @@ export TERM=xterm-color						# use color-capable termcap
 # git
 # -----------------------------------------------------------------------------
 function ga() { git add $1\ ; }				# add files to be tracked
-function gc() { git commit -am $@ ; }		# commit changes locally
+function gc() { git commit -m $@ ; }		# commit changes locally
 alias gd='git diff'							# see what happened
 alias gi='git check-ignore -v *'			# see what's being ignored
 alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'	# see what happened
