@@ -1,3 +1,4 @@
+echo "$0: you REALLY mean to be using this?"
 
 export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 
