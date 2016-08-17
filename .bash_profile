@@ -52,18 +52,21 @@
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# If $STANDALONE is anything, meaning we're being called by a test yoke, then
+# If $TEST_YOKE is anything, meaning we're being called by a test yoke, then
 # honor the environment variables set for us. Otherwise set defaults for this
 # script's behavior.
 # -----------------------------------------------------------------------------
-if [[ ! "$STANDALONE" ]] ; then				# we being invoked from outside?
-	DEBUG=0	# 1								# default: no debugging output
-	RUN_TESTS=0 # 1							# default: set up; don't run tests
-else
-	echo "$(basename $0)[${LINENO}]: DEBUG \"$DEBUG\" RUN_TESTS \"$RUN_TESTS\" SILENT ${#SILENT} STANDALONE \"$STANDALONE\""
+if [[ ! $TEST_YOKE ]] ; then				# we being invoked from outside?
+	DEBUG='' # 'YES'						# default: no debugging output
+	RUN_TESTS='' # 'YES'					# default: production, not QA tests
+	declare -g SILENT='YES' # ''			# default: silent running
+#else
+	# anything to be done before being run from an outside test yoke
+	# echo "$(basename -- "$0")[${LINENO}]: DEBUG \"$DEBUG\" RUN_TESTS \"$RUN_TESTS\" SILENT ${#SILENT} TEST_YOKE \"$TEST_YOKE\""
 fi
+
 # if $SILENT is non-null, then give it a string that'll silence output
-if [[ "$SILENT" ]] ; then SILENT='>& /dev/null'	; fi # overloading
+if [[ $SILENT ]] ; then SILENT='>& /dev/null'	; fi # overloading
 
 # -----------------------------------------------------------------------------
 # Constants:
@@ -139,7 +142,7 @@ cleanPath() {
 # -----------------------------------------------------------------------------
 # if $debug show calling function and error message
 # -----------------------------------------------------------------------------
-debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
+debug() { if  [[ $DEBUG ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
 
 # -----------------------------------------------------------------------------
 # pad out $1 with $2 number of digits (for XXX of YYY: ...). This is magic.
@@ -189,7 +192,7 @@ getDomainnames() {
 # -----------------------------------------------------------------------------
 doLocByDNS() {
 	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
-	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+	if [[ ! $DEBUG ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return $FAILURE ; fi
 	# process arguments passed into the function
@@ -216,7 +219,7 @@ doLocByDNS() {
 # -----------------------------------------------------------------------------
 doLocByWifi() {
 	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
-	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if set, punt
+	if [[ ! $DEBUG ]] && [ -z "$where" ] ; then return ; fi	# if set, punt
 
 	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
@@ -285,9 +288,13 @@ doLocByDateTime() {
 # Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 
-t=(	[0]=pass [1]=fail )						# (needs BASH_VERSION >= 4)
+t=(	[0]=pass [1]=fail )						# array pairs codes to readable text
+# if what you expected == what actually happened, be happy
 passFail() { if (( $1 == $2 )) ; then echo -n "success" ; else echo -n "failure" ; fi }
 
+# -----------------------------------------------------------------------------
+# Every function to test (with arguments) and the expected result.
+# -----------------------------------------------------------------------------
 declare -A allTheTests=(					# (needs BASH_VERSION >= 4)
 
 	# -----|  doLocByDateTime  |-----------------------------------------------
@@ -452,8 +459,8 @@ doHostThings() {
 	# Do more complicated tests to customize one way for multiple machines.
 	# -------------------------------------------------------------------------
 	# work machine, on-line and off-line names
-	if [ "$HOSTNAME" = 'this.machine.example.com' \
-		-o "$HOSTNAME" = 'michael.local' ] ;
+	if [ "$HOSTNAME" = 'michael.local' \
+		-o "$HOSTNAME" = 'michael.at_]work.com' ] ;
 	then
 		S_CERTS='/Users/me/employer/.chef'	# where I keep Chef certs
 
@@ -467,14 +474,15 @@ doHostThings() {
 # -----------------------------------------------------------------------------
 # Run (exceedingly optional) add-on scripts
 # -----------------------------------------------------------------------------
-dir="${BASH_SOURCE%/*}"						# pointer to this script's location
+dir="${BASH_SOURCE%/*}"						# point to this script's location
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist, use current PWD
-#. "$dir/.set_prompt.sh"					# pre-powerline, set shell prompt
+#. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
+#. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
 
 # -----------------------------------------------------------------------------
 # Do command aliasing. Works on any bash version.
 # -----------------------------------------------------------------------------
-commandAliases() {
+
 # -----------------------------------------------------------------------------
 # UN*X command history
 # -----------------------------------------------------------------------------
@@ -529,35 +537,33 @@ export TERM=xterm-color						# use color-capable termcap
 # -----------------------------------------------------------------------------
 function ga() { git add $1\ ; }				# add files to be tracked
 function gc() { git commit -am $@ ; }		# commit changes locally
+alias gd='git diff'							# see what happened
 alias gi='git check-ignore -v *'			# see what's being ignored
 alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'	# see what happened
-alias gs='git status'						# see what's going on
+alias gs='git status --short'				# see what's going on
 alias gp='git push -u origin master'		# send changes upstream
 
 # -----------------------------------------------------------------------------
-# Exiftool and the many ways I use it
+# Exiftool: rename image files by embedded EXIF data. Can operate in existing
+# directory (in-line) or move recursively into a dated directory hierarchy.
+#
+# NOTE: exiftool was using 'CreateDate' but 'FileModifyDate' actually works.
 # -----------------------------------------------------------------------------
-# rename-by-date and move into dated folder hierarchy
-GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
-# exiftool - was using CreateDate but FileModifyDate actually exists
-## exiftool recursively rename files and place into nested directory structure
-#
+# er ~ rename by modify date & move into dated folder hierarchy
 alias er="exiftool -r '-FileName<FileModifyDate' -d %Y/%m/%Y%m%d/%Y%m%d_%H%M%S%%-c.%%le"
-#
-## exiftool inline (replace filenames without sorting into nested directories)
-#
-# era - show all tags
-# ert - show time tags
-# erc - rename inline with creation date
-# eri - rename inline with modification date
-alias era="exiftool -a -G1 -s "
-alias ert="exiftool -time:all -a -G0:1 -s "
+# erc ~ rename inline with creation date
 alias erc="exiftool -r '-FileName<DateTimeOriginal' -d %Y%m%d_%H%M%S%%-c.%%le"
+# eri - rename inline with modification date
 alias eri="exiftool -r '-FileName<FileModifyDate' -d %Y%m%d_%H%M%S%%-c.%%le"
-## exiftool show tabular compilation of the GPS locations (-n in decimal)
-alias erg="exiftool -n -filename -gpslatitude -gpslongitude -T"
+alias era="exiftool -a -G1 -s "				# show all tags
+alias ert="exiftool -time:all -a -G0:1 -s "	# show time tags
+# show tabular compilation of the GPS locations (-n in decimal) arg="*.JPG"
+alias erg="exiftool -gpslatitude -gpslongitude -T -n"
 alias en="exiftool -all="
+# pix without EXIF data (but with MF5 filenames) can be moved:
 alias mvmd5='mv ????????????????????????????????.* /Volumes/foobar/pix/'
+# my whole exiftool work-flow
+GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
 alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 
 # -----------------------------------------------------------------------------
@@ -566,6 +572,7 @@ alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
 alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
 
+#TO-DO: put the following in a doHome() doWork() doElsewhere()
 # -----------------------------------------------------------------------------
 # Zipcar stuff
 # -----------------------------------------------------------------------------
@@ -575,28 +582,13 @@ source ~/.profile							# for rvm
 
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
-} # end commandAliases()
 
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 # <<---|  The end of the defined functions. Following is the main body. |---->>
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 
-# -----------------------------------------------------------------------------
-# Here's the mundane $PATH changes; further additions are pushed in front of
-# the path, to be found first.
-# -----------------------------------------------------------------------------
-# Ask Python to help in finding the binaries directory; then double-check. This
-# should work in environments which have multiple versions installed, as the
-# active python is queried.
-# -----------------------------------------------------------------------------
-PY_BIN=`python -c 'import sys; print sys.prefix'`'/bin'	# ask Python right spot
-if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
-PATH=/opt/ImageMagick:$PATH					# ImageMagick
-PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
-PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
-
 getDomainnames								# find all the domainnames we can
-if [[ "$RUN_TESTS" ]] ; then
+if [[ $RUN_TESTS ]] ; then
 	echo "$(date +'%H:%M:%S') ~ start"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
 	doAllTheTests allTheTests				# º Run all the tests             º
 	echo "$(date +'%H:%M:%S') ~ end"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
@@ -605,21 +597,30 @@ else
 	doArchSpecifics							# do architecture-specifics
 	doOsSpecifics							# do OS-specifics
 	determineLocationIfNotExcluded			# do location-specifics
-	setTermColors							# set terminal colors
-	setTermPrompt							# set the shell prompt
 fi
-commandAliases								# aliases work on any bash version
 
 # -----------------------------------------------------------------------------
-# Set the MANPATH & the all-important PATH
+# Manage $PATH and $MANPATH. Put your customizations before $PATH to have them
+# used instead of built-ins.
 # -----------------------------------------------------------------------------
-export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
+export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts
+
+# -----------------------------------------------------------------------------
+# Ask Python to help in finding the binaries directory; then double-check. This
+# should work in environments which have multiple versions installed, as the
+# active python is queried.
+# -----------------------------------------------------------------------------
+PY_BIN=`python -c 'import sys; print sys.prefix'`'/bin'	# ask Python right spot
+if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
+#PATH=/opt/ImageMagick:$PATH				# ImageMagick
+PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+#PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 cleanPath									# remove duplicates from PATH
-PATH=~/bin:$PATH							# find my stuff first
+PATH=~/bin:$PATH							# my personal projects first :-)
 export PATH									# share and enjoy!
 
 # -----------------------------------------------------------------------------
 # Housekeeping for regular use, debugging, and calling from a QA test yoke.
 # -----------------------------------------------------------------------------
-unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset STANDALONE # QA stuff
+unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset TEST_YOKE # QA stuff
 #set +uo
