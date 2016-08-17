@@ -1,12 +1,7 @@
 #!/usr/bin/env bash							# search PATH for bash ~ portable
 #set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
-# -----------------------------------------------------------------------------
-# Uncomment the following switches to enable QA features.
-# -----------------------------------------------------------------------------
-DEBUG=1										# show debugging output
-RUN_TESTS=1									# QA switch ~ never for production
-#SILENT='>& /dev/null'						# silence command output
+
 # -----------------------------------------------------------------------------
 # I've used a frightening & bewildering variety of UN*X distros since the early
 # 1980s. One thing all of them had in common was this "run-commands" file; it's
@@ -55,6 +50,28 @@ RUN_TESTS=1									# QA switch ~ never for production
 # 
 # Find this at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# If $STANDALONE is anything, meaning we're being called by a test yoke, then
+# honor the environment variables set for us. Otherwise set defaults for this
+# script's behavior.
+# -----------------------------------------------------------------------------
+if [[ ! "$STANDALONE" ]] ; then				# we being invoked from outside?
+	DEBUG=0	# 1								# default: no debugging output
+	RUN_TESTS=0 # 1							# default: set up; don't run tests
+else
+	echo "$(basename $0)[${LINENO}]: DEBUG \"$DEBUG\" RUN_TESTS \"$RUN_TESTS\" SILENT ${#SILENT} STANDALONE \"$STANDALONE\""
+fi
+# if $SILENT is non-null, then give it a string that'll silence output
+if [[ "$SILENT" ]] ; then SILENT='>& /dev/null'	; fi # overloading
+
+# -----------------------------------------------------------------------------
+# Constants:
+# -----------------------------------------------------------------------------
+export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+#set -o xtrace
+#set -o nounset
+# -----------------------------------------------------------------------------
 SUCCESS=0									# standard UN*X return code
 FAILURE=1									# standard UN*X return code
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
@@ -72,7 +89,7 @@ sun=7										# $(date +'%u') returns [0..7]
 # -----------------------------------------------------------------------------
 tryLocationMethods=( DNS WIFI DATE )		# choose from DNS WIFI DATE
 where=''									# final answer stored here
-skipCheckOnThese=( 'workserver' )			# self-evident location
+skipCheckOnThese=( 'pippin.apple.com' )		# self-evident location
 dayStarts=9									# time of day 0..23 ~ work starts
 dayEnds=17									# time of day 0..23 ~ work ends
 AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
@@ -81,9 +98,8 @@ WIFI=`$AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //'`
 # -----------------------------------------------------------------------------
 # DNS settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-# myWifis[Coffee]=cafe						# how-to: add element in code
-declare -A myDNSs=(							# (need BASH_VERSION >= 4)
-	[apple.com]=work						# compound assignment
+declare -A myDNSs=(							# (needs BASH_VERSION >= 4)
+	[comcastbusiness.net]=work				# compound assignment
 	[zipcar.com]=work						# left-hand side must be unique
 	[comcast.net]=home
 	[shaw.net]=home
@@ -92,7 +108,7 @@ declare -A myDNSs=(							# (need BASH_VERSION >= 4)
 # -----------------------------------------------------------------------------
 # Wi-Fi settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-declare -A myWifis=(						# (need BASH_VERSION >= 4)
+declare -A myWifis=(						# (needs BASH_VERSION >= 4)
 	[Apple]=work							# compound assignment
 	[Zipcar]=work							# left-hand side must be unique
 	[bbhome]=home
@@ -126,7 +142,7 @@ cleanPath() {
 debug() { if  [[ "$DEBUG" ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
 
 # -----------------------------------------------------------------------------
-# print $1 with $2 number of digits
+# pad out $1 with $2 number of digits (for XXX of YYY: ...). This is magic.
 # -----------------------------------------------------------------------------
 function pad {
 	local n=$1 ; local w=$2 ; local s=$3
@@ -144,7 +160,8 @@ function pad {
 declare -a d=()								# array to hold domainnames we get
 
 getDomainnames() {
-	# TO-DO: check this on a greater variety of workplaces and OSes.
+	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
+
 	# -------------------------------------------------------------------------
 	# Method 1: take last two items from $HOSTNAME
 	# -------------------------------------------------------------------------
@@ -168,23 +185,10 @@ getDomainnames() {
 }
 
 # -----------------------------------------------------------------------------
-# Here's the mundane $PATH changes; further additions are pushed in front of
-# the path, to be found first.
-# -----------------------------------------------------------------------------
-# Ask Python to help in finding the binaries directory; then double-check. This
-# should work in environments which have multiple versions installed, as the
-# active python is queried.
-# -----------------------------------------------------------------------------
-PY_BIN=`python -c 'import sys; print sys.prefix'`'/bin'	# ask Python right spot
-if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
-PATH=/opt/ImageMagick:$PATH					# ImageMagick
-PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
-PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
-
-# -----------------------------------------------------------------------------
 # location by the DNS services name
 # -----------------------------------------------------------------------------
 doLocByDNS() {
+	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
 	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return $FAILURE ; fi
@@ -196,23 +200,22 @@ doLocByDNS() {
 	# sanity-check inputs before moving on
 	if [ "${#dnss[@]}" -eq 0 ] || [ "${#domainArray[@]}" -eq 0 ] ; then return $FAILURE ; fi
 
-	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
-
 	for i in "${!dnss[@]}"; do				# iterate over the array of DNSs
 		for j in "${domainArray[@]}" ; do	# iterate over domainnames found
 			if [[ "$i" == "$j"* ]]; then	# if there's a match
 				where="$i"					# remember the associated location
-				return
+				return "$SUCCESS"
 			fi
 		done
 	done
-	return $FAILURE
+	return "$FAILURE"
 } # end of doLocByDNS
 
 # -----------------------------------------------------------------------------
 # use airport command to get access point name
 # -----------------------------------------------------------------------------
 doLocByWifi() {
+	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
 	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if set, punt
 
 	# $2 must be an associatve array
@@ -224,8 +227,6 @@ doLocByWifi() {
 
 	# sanity-check inputs before moving on
 	if [ -z "$active" ] ; then return $FAILURE ; fi
-
-	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
 
 	for i in "${!wifis[@]}"; do				# iterate over the array of wifis
 		if [ "$i" == "$active" ] ; then		# if we found a match
@@ -240,21 +241,22 @@ doLocByWifi() {
 # guessing location by time-of-day (at work during daytime)
 # -----------------------------------------------------------------------------
 doLocByDateTime() {
-	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# if already set, punt
+	if [[ ! "$DEBUG" ]] && [ -z "$where" ] ; then return ; fi	# leave if set
 
 	# process arguments passed into the function
 	hour=$1									# 00..24 hour of day
 	hour=${hour#0}							# strip leading zero, if present
 	day=$2									# 0..7 day of week
 
-	local returnCode="$SUCCESS"
+	local returnCode="$SUCCESS"				# all get a medal unless noted...
 
 	# sanity-check inputs before moving on
 	if  [[ $hour =~ $isNumber ]] &&
-		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ; then return $FAILURE ; fi
-
+		( ! ((( $hour >= 0 )) && (( $hour <= 24 ))) ) ;
+	then
+		returnCode="$FAILURE"				# this is a fail
 	# -------------------------------------------------------------------------
-	if (( ( $day >= $mon && $day <= $fri ) &&
+	elif (( ( $day >= $mon && $day <= $fri ) &&
 		( $hour >= $dayStarts && $hour <= $dayEnds ) )) ;
 	then
 		debug "work (daytime weekday)"		# tell the debugging human
@@ -275,31 +277,33 @@ doLocByDateTime() {
 		debug "someplace unknown"			# no idea where we are
 		returnCode="$FAILURE"				# this is a fail
 	fi
-	return $returnCode
+
+	return "$returnCode"
 } # end of doLocByDateTime
 
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 # Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 
-t=(	[0]=pass [1]=fail )						# (need BASH_VERSION >= 4)
+t=(	[0]=pass [1]=fail )						# (needs BASH_VERSION >= 4)
 passFail() { if (( $1 == $2 )) ; then echo -n "success" ; else echo -n "failure" ; fi }
 
-declare -A allTheTests=(					# (need BASH_VERSION >= 4)
-	# ----- doLocByDateTime ---------------------------------------------------
+declare -A allTheTests=(					# (needs BASH_VERSION >= 4)
+
+	# -----|  doLocByDateTime  |-----------------------------------------------
 	['doLocByDateTime 11 5']="$SUCCESS"
 	['doLocByDateTime 25 8']="$FAILURE"
 	['doLocByDateTime "dog" 8']="$FAILURE"
 
-	# ----- doLocByDNS --------------------------------------------------------
+	# -----|  doLocByDNS  |----------------------------------------------------
 	['doLocByDNS d myDNSs']="$SUCCESS"
 	['doLocByDNS "" ""']="$FAILURE"
 
-	# ----- doLocByWifi -------------------------------------------------------
+	# -----|  doLocByWifi  |---------------------------------------------------
 	['doLocByWifi "$WIFI" myWifis']="$SUCCESS"
 	['doLocByWifi "" myWifis']="$FAILURE"
 
-	# ----- miscellaneous -----------------------------------------------------
+	# -----|  miscellaneous  |-------------------------------------------------
 	['doArchSpecifics']="$SUCCESS"
 	['doOsSpecifics']="$SUCCESS"
 	['doHostThings']="$SUCCESS"
@@ -309,19 +313,21 @@ declare -A allTheTests=(					# (need BASH_VERSION >= 4)
 # Run over the array of tests, report return codes.
 # -----------------------------------------------------------------------------
 doAllTheTests() {
+	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
 	# sanity-check inputs before moving on
 	if ( ! (( ${#1} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return ; fi
 
-	# process arguments passed into the function
-	if (( $BASH_VERSINFO < 4 )) ; then return ; fi # associative arrays needed
 	declare -n tests=$1						# how one passes associative arrays
 
 	# ----- iterate over array of tests ---------------------------------------
 	__i__=1									# just a simple counter
 	__l__=${#tests[@]}						# total number of tests
 	for c in "${!tests[@]}"; do				# iterate over the array of tests
+		# run test
 		eval $c $SILENT						# evaluate the test command line
 		r=$?								# save the test return value
+
+		# generate output
 		pad $__i__ ${#__l__} -n				# output number of this test
 		i=$((__i__++))						# on to next in the array
 		echo -n "/$__l__ ~ "				# output total number of tests
@@ -366,32 +372,32 @@ determineLocationIfNotExcluded() {
 
 # -----------------------------------------------------------------------------
 # Do architecture-specific things.
+#
+# also: i386, i486, i586, i686, alpha, sparc, m68k, mips, ppc...
 # -----------------------------------------------------------------------------
 doArchSpecifics() {
-	archStr=$(arch)							# get machine architecture
-	debug "machine architecture is \"$archStr\""
-	case "archStr" in						# do architecture-specifics
+	debug "machine architecture is \"$HOSTTYPE\", trimmed to \"${HOSTTYPE%_*}\""
+	case "${HOSTTYPE%_*}" in				# get "x86" from "x86_64"
 		# ---------------------------------------------------------------------
-		i386)								# including Mac
+		x86)								# Macs, Intel running Linux
 		;;
 
 		# ---------------------------------------------------------------------
 		arm)								# including iPhone/i$ad
 		;;
-	esac # end archStr
-}
+	esac # end $HOSTTYPE
+} # end doArchSpecifics()
 
 # -----------------------------------------------------------------------------
 # Do OS-specific things.
 # -----------------------------------------------------------------------------
 doOsSpecifics() {
-	unameStr=${OSTYPE//[0-9.]/}				# get OS name and
-	debug "operating system is \"$unameStr\""
-echo  "unameStr $unameStr"
-	case "$unameStr" in						# do OS-appropriate things
+	local os=${OSTYPE//[0-9.]/}				# get text part of the OS name and
+	os=${os,,}								# lowercase normalize it then
+	debug "machine operating system is \"$os\""
+	case "$os" in							# do OS-appropriate things
 		# ---------------------------------------------------------------------
 		darwin)								# Mac OS X
-
 			alias dnsflush='sudo discoveryutil mdnsflushcache ; sudo discoveryutil udnsflushcaches'
 
 			# iPhone simulator is hidden for some strange reason
@@ -399,7 +405,6 @@ echo  "unameStr $unameStr"
 
 			# use powerline and gitstatus-powerline for prompts & status lines
 			POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
-	echo "POWERLINE_PATH $POWERLINE_PATH"
 			if [[ "$POWERLINE_PATH" != "" ]]; then
 				source ${POWERLINE_PATH}/bindings/bash/powerline.sh
 			else
@@ -408,10 +413,14 @@ echo  "unameStr $unameStr"
   			;;
 
 		# ---------------------------------------------------------------------
-		Linux)
+		linux)
 			alias ls='ls --color --classify' # make ls colorful
 			today=`date "+%Y%m%d"`			# needed for logs
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
+			;;
+
+		# ---------------------------------------------------------------------
+		linux-gnu)							# Fedora
 			;;
 
 		# ---------------------------------------------------------------------
@@ -430,11 +439,11 @@ doHostThings() {
 		# ---------------------------------------------------------------------
 		michael.local)						# home machine
 			# home-grown duplicate file deletion scheme ; ignore if you're not me :-)
-			alias ldups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; ../rmdups ; ls | wc -l'
+			#alias ldups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; ../rmdups ; ls | wc -l'
 			alias mdups='ls | wc -l ; rm -f ../filelist ; cksum *.jpg | sort -n > ../filelist ; rmdups ; ls | wc -l'
-
+#
 			# to use alias add hostnames and users to your ~/.ssh/config
-			alias 11="ssh u76141767@s513372989.onlinehome.us" 	# 1and1.com
+			#alias 11="ssh u76141767@s513372989.onlinehome.us" 	# 1and1.com
 
 		;; # end (michael.local) case
 	esac; # end $HOSTNAME case
@@ -444,7 +453,7 @@ doHostThings() {
 	# -------------------------------------------------------------------------
 	# work machine, on-line and off-line names
 	if [ "$HOSTNAME" = 'this.machine.example.com' \
-		-o "$HOSTNAME" = 'msattler.local' ] ;
+		-o "$HOSTNAME" = 'michael.local' ] ;
 	then
 		S_CERTS='/Users/me/employer/.chef'	# where I keep Chef certs
 
@@ -456,30 +465,16 @@ doHostThings() {
 } # end doHostThings
 
 # -----------------------------------------------------------------------------
-# Run add-on scripts
+# Run (exceedingly optional) add-on scripts
 # -----------------------------------------------------------------------------
 dir="${BASH_SOURCE%/*}"						# pointer to this script's location
-if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use current PWD
-. "$dir/.set_prompt.sh"						# pre-powerline, set shell prompt
+if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist, use current PWD
+#. "$dir/.set_prompt.sh"					# pre-powerline, set shell prompt
 
-# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
-# <<---|  The end of the defined functions. Following is the main body. |---->>
-# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
-
-getDomainnames								# find all the domainnames we can
-if [[ "$RUN_TESTS" ]] ; then
-	echo "$(date +'%H:%M:%S') ~ start"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
-	doAllTheTests allTheTests				# º Run all the tests             º
-	echo "$(date +'%H:%M:%S') ~ end"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
-else
-	doHostThings							# do host-specifics
-	doArchSpecifics							# do architecture-specifics
-	doOsSpecifics							# do OS-specifics
-	determineLocationIfNotExcluded			# do location-specifics
-	setTermColors							# set terminal colors
-	setTermPrompt							# set the shell prompt
-fi
-
+# -----------------------------------------------------------------------------
+# Do command aliasing. Works on any bash version.
+# -----------------------------------------------------------------------------
+commandAliases() {
 # -----------------------------------------------------------------------------
 # UN*X command history
 # -----------------------------------------------------------------------------
@@ -535,7 +530,7 @@ export TERM=xterm-color						# use color-capable termcap
 function ga() { git add $1\ ; }				# add files to be tracked
 function gc() { git commit -am $@ ; }		# commit changes locally
 alias gi='git check-ignore -v *'			# see what's being ignored
-alias gl='git log'							# see what happened
+alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'	# see what happened
 alias gs='git status'						# see what's going on
 alias gp='git push -u origin master'		# send changes upstream
 
@@ -580,6 +575,40 @@ source ~/.profile							# for rvm
 
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
+} # end commandAliases()
+
+# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
+# <<---|  The end of the defined functions. Following is the main body. |---->>
+# <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
+
+# -----------------------------------------------------------------------------
+# Here's the mundane $PATH changes; further additions are pushed in front of
+# the path, to be found first.
+# -----------------------------------------------------------------------------
+# Ask Python to help in finding the binaries directory; then double-check. This
+# should work in environments which have multiple versions installed, as the
+# active python is queried.
+# -----------------------------------------------------------------------------
+PY_BIN=`python -c 'import sys; print sys.prefix'`'/bin'	# ask Python right spot
+if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
+PATH=/opt/ImageMagick:$PATH					# ImageMagick
+PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
+
+getDomainnames								# find all the domainnames we can
+if [[ "$RUN_TESTS" ]] ; then
+	echo "$(date +'%H:%M:%S') ~ start"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
+	doAllTheTests allTheTests				# º Run all the tests             º
+	echo "$(date +'%H:%M:%S') ~ end"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
+else
+	doHostThings							# do host-specifics
+	doArchSpecifics							# do architecture-specifics
+	doOsSpecifics							# do OS-specifics
+	determineLocationIfNotExcluded			# do location-specifics
+	setTermColors							# set terminal colors
+	setTermPrompt							# set the shell prompt
+fi
+commandAliases								# aliases work on any bash version
 
 # -----------------------------------------------------------------------------
 # Set the MANPATH & the all-important PATH
@@ -588,4 +617,9 @@ export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts MANPATH
 cleanPath									# remove duplicates from PATH
 PATH=~/bin:$PATH							# find my stuff first
 export PATH									# share and enjoy!
+
+# -----------------------------------------------------------------------------
+# Housekeeping for regular use, debugging, and calling from a QA test yoke.
+# -----------------------------------------------------------------------------
+unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset STANDALONE # QA stuff
 #set +uo
