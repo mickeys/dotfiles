@@ -1,0 +1,22 @@
+# -----------------------------------------------------------------------------
+# key-mapping
+# -----------------------------------------------------------------------------
+"\e[A": history-search-backward	# up cursor key incrementally searches history
+"\e[B": history-search-forward	# dn cursor key incrementally searches history
+"\e[C": forward-char			# normal forward arrow behavior
+"\e[D": backward-char			# normal backwward arrow behavior
+
+# -----------------------------------------------------------------------------
+# bash completion
+# -----------------------------------------------------------------------------
+set completion-ignore-case on	# ignore filename / dirname case
+set show-all-if-ambiguous on	# if there's more than one completion, show all
+TAB: menu-complete				# complete with one tab, not the usual two
+set match-hidden-files on		# find all the dotfiles, like this one :-)
+
+# -----------------------------------------------------------------------------
+# Read this far? You may want to check out:
+#
+# http://www.commandlinefu.com/commands/browse
+# http://codeinthehole.com/writing/the-most-important-command-line-tip-incremental-history-searching-with-inputrc/
+# -----------------------------------------------------------------------------
