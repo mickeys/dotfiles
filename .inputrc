@@ -18,5 +18,6 @@ set match-hidden-files on		# find all the dotfiles, like this one :-)
 # Read this far? You may want to check out:
 #
 # http://www.commandlinefu.com/commands/browse
+# https://broddlit.wordpress.com/2008/04/12/making-the-bash-history-a-better-place/
 # http://codeinthehole.com/writing/the-most-important-command-line-tip-incremental-history-searching-with-inputrc/
 # -----------------------------------------------------------------------------
