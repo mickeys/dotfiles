@@ -524,7 +524,8 @@ shopt -s checkwinsize						# after each command check window size...
 # other environment settings
 # -----------------------------------------------------------------------------
 export EDITOR=/usr/bin/vim					# graphic text editor of choice
-set completion-ignore-case on				# tab char => possible file endings
+if [ -f $(brew --prefix)/etc/bash_completion ] ;	# if bash completion exists
+then . $(brew --prefix)/etc/bash_completion ; fi	# hey, check out .inputrc
 
 # -----------------------------------------------------------------------------
 # general things, alphabetically
@@ -541,6 +542,7 @@ alias .6='cd ../../../../../../'            # Go back 6 directory levels
 #alias cpbash='scp .bash_profile USERNAME_OVER_THERE@hostname:'
 alias e="exit"								# end this shell
 alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
 alias kurl='curl -#O'						# download and save w orig filename
 alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
 alias ll='ls -lAhF'							# ls w kb, mb, gb
