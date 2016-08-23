@@ -1,19 +1,34 @@
 # -----------------------------------------------------------------------------
+# .inputrc - tweaks to shell interactions ~ just that much more awesome!
+#
+# Find me at ~ https://github.com/mickeys/dotfiles/blob/master/.inputrc
+# -----------------------------------------------------------------------------
 # key-mapping
 # -----------------------------------------------------------------------------
 "\e[A": history-search-backward	# up cursor key incrementally searches history
 "\e[B": history-search-forward	# dn cursor key incrementally searches history
 "\e[C": forward-char			# normal forward arrow behavior
 "\e[D": backward-char			# normal backwward arrow behavior
+# To map [<-] and [->] on macOS go to (System Preferences → Keyboard →
+# Shortcuts → Mission Control) and disable the two arrow key preferences.
+"\e[1;5D": backward-word		# Ctrl + [<-] ~ \e[1 should be [Option] key
+"\e[1;5C": forward-word			# Ctrl + [->]
 
 # -----------------------------------------------------------------------------
 # bash completion
 # -----------------------------------------------------------------------------
+set bell-style visible			# none, visible, or audible
 set completion-ignore-case on	# ignore filename / dirname case
-set show-all-if-ambiguous on	# if there's more than one completion, show all
-TAB: menu-complete				# complete with one tab, not the usual two
+set completion-map-case on		# treat '_' and '-' as the same for matching!
+set completion-prefix-display-length 2	# ...2.txt ...3.txt ...4.txt
+set completion-query-items 50	# Ask before displaying >50 items
+set mark-directories on			# show file type in listing (1 of 2)
 set match-hidden-files on		# find all the dotfiles, like this one :-)
+set show-all-if-ambiguous on	# if there's more than one completion, show all
+set show-all-if-unmodified on	# if there's more than one completion, show all
+set visible-stats off			# show file type in listing (2 of 2)
 
+TAB: menu-complete				# complete with one tab, not the usual two
 # -----------------------------------------------------------------------------
 # Read this far? You may want to check out:
 #
