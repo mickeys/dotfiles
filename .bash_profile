@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash -x
+####!/usr/bin/env bash
 #set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
 
@@ -54,6 +55,17 @@
 # This is a feature, not a bug. Update your bash to a modern one. This has been
 # tested mostly on macOS 10.12 (Sierra), with side-trips to several Linuxes.
 # -----------------------------------------------------------------------------
+PROFILING=1									#
+if (( PROFILING )) ; then					#
+#	PS4='+\t '
+#	PS4='$(date "+%s.%N ($LINENO) + ")'
+#	PS4='$(date "+%3N ($LINENO) + ")'		# 6N=microseconds
+	PS4='$(date "+_%S_%6N_ ($LINENO) + ")'		# secs & 9=nano, 6=milli, 3=micro
+	exec 3>&2 2>/Users/msattler/bashstart.$$.log
+	set -xT
+else
+	PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+fi
 
 # -----------------------------------------------------------------------------
 # If $TEST_YOKE is *anything*, meaning we're being called by a test yoke, then
@@ -85,7 +97,6 @@ fri=5										# $(date +'%u') returns [0..7]
 sat=6										# $(date +'%u') returns [0..7]
 sun=7										# $(date +'%u') returns [0..7]
 # -----------------------------------------------------------------------------
-export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 #set -o xtrace								# debugging stuff
 #set -o nounset								# debugging stuff
 
@@ -150,7 +161,7 @@ cleanPath() {
 # -----------------------------------------------------------------------------
 # if $debug show calling function and error message
 # -----------------------------------------------------------------------------
-debug() { if  [[ $DEBUG ]] ; then echo "${FUNCNAME[1]}: $1" ; fi }
+debug() { if  [[ $DEBUG ]] ; then echo "${FUNCNAME[1]}(${LINENO}): $1" ; fi }
 
 # -----------------------------------------------------------------------------
 # pad out $1 with $2 number of digits (for XXX of YYY: ...). This is magic.
@@ -601,6 +612,7 @@ then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
 # -----------------------------------------------------------------------------
 # general things, alphabetically
 # -----------------------------------------------------------------------------
+alias brewski='brew update && brew upgrade --all && brew cleanup; brew doctor'
 alias c="clear"								# clear the terminal screen
 alias ~="cd ~"                              # Go to the home directory
 alias cd..='cd ../'                         # Go back 1 directory level (for fast typers)
@@ -666,6 +678,13 @@ alias g='git'								# save 66% of typing
 complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
 function ga() { git add "$1"\ ; }			# add files to be tracked
 function gc() { git commit -m "$@" ; }		# commit changes locally
+
+
+alias showpath="echo \"${PATH//:/$'\n'}\""
+alias showpath="echo ${PATH//:/$'\n'}"
+
+function showpath() { echo "${PATH//:/$'\n'}" ; }
+
 alias gd='git diff'							# see what happened
 alias gi='git check-ignore -v *'			# see what's being ignored
 alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'	# see what happened
@@ -740,17 +759,17 @@ alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/micha
 extract () {
 	if [ -f "$1" ] ; then
 	  case "$1" in
-		*.tar.bz2)   tar xjf "$1"     ;;
-		*.tar.gz)    tar xzf "$1"     ;;
-		*.bz2)       bunzip2 "$1"     ;;
-		*.rar)       unrar e "$1"     ;;
-		*.gz)        gunzip "$1"      ;;
-		*.tar)       tar xf "$1"      ;;
-		*.tbz2)      tar xjf "$1"     ;;
-		*.tgz)       tar xzf "$1"     ;;
-		*.zip)       unzip "$1"       ;;
-		*.Z)         uncompress "$1"  ;;
-		*.7z)        7z x "$1"        ;;
+		*.tar.bz2)   tar xjf "$1"     ;;	# tar ~ bzip2
+		*.tar.gz)    tar xzf "$1"     ;;	# tar ~ gzip
+		*.bz2)       bunzip2 "$1"     ;;	# bzip2
+		*.rar)       unrar e "$1"     ;;	# Roshal Archive (win.rar)
+		*.gz)        gunzip "$1"      ;;	# gzip
+		*.tar)       tar xf "$1"      ;;	# tar
+		*.tbz2)      tar xjf "$1"     ;;	# bzip2-compressed tar archive
+		*.tgz)       tar xzf "$1"     ;;	 # really tar.gz
+		*.zip)       unzip "$1"       ;;	# zip (pkware)
+		*.Z)         uncompress "$1"  ;;	# compress
+		*.7z)        7z x "$1"        ;;	# 7-Zip
 		*)     echo "'$1' cannot be extracted via extract()" ;;
 		 esac
 	 else
@@ -790,7 +809,9 @@ fi
 # Manage $PATH and $MANPATH. Put your customizations before $PATH to have them
 # used instead of built-ins.
 # -----------------------------------------------------------------------------
-export MANPATH=/opt/local/share/man:$MANPATH	# MacPorts
+MANPATH=/opt/local/share/man:$MANPATH		# MacPorts
+# TO-DO: fix ~ MANPATH="/usr/local/opt/coreutils/libexe‌​c/gnuman:${MANPA‌NTH-/usr/shar‌e/man}"
+MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"	# both needed?
 
 # -----------------------------------------------------------------------------
 # Ask Python to help in finding the binaries directory; then double-check. This
@@ -801,6 +822,7 @@ PY_BIN=$(python -c 'import sys; print sys.prefix')'/bin'	# ask Python right spot
 if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 #PATH=/opt/ImageMagick:$PATH				# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"	# GNU
 #PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 cleanPath									# remove duplicates from PATH
 PATH=~/bin:$PATH							# my personal projects first :-)
@@ -811,3 +833,11 @@ export PATH									# share and enjoy!
 # -----------------------------------------------------------------------------
 unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset TEST_YOKE # QA stuff
 #set +uo
+if (( PROFILING )) ; then 
+	set +x
+	exec 2>&3 3>&-
+fi
+# Setting PATH for Python 2.7
+# The original version is saved in .bash_profile.pysave
+PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:${PATH}"
+export PATH
