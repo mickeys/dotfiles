@@ -1,4 +1,5 @@
 #!/bin/bash -x
+# shellcheck disable=1090,1091
 ####!/usr/bin/env bash
 #set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
@@ -55,7 +56,7 @@
 # This is a feature, not a bug. Update your bash to a modern one. This has been
 # tested mostly on macOS 10.12 (Sierra), with side-trips to several Linuxes.
 # -----------------------------------------------------------------------------
-PROFILING=1									#
+PROFILING=0									# TO-DO: document profiling
 if (( PROFILING )) ; then					#
 #	PS4='+\t '
 #	PS4='$(date "+%s.%N ($LINENO) + ")'
@@ -90,7 +91,7 @@ if [[ $SILENT ]] ; then SILENT='>& /dev/null'	; fi # overloading
 SUCCESS=0									# standard UN*X return code
 FAILURE=1									# standard UN*X return code
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 myDomain=''									# initialize empty before use
 mon=0										# $(date +'%u') returns [0..7]
 fri=5										# $(date +'%u') returns [0..7]
@@ -117,7 +118,7 @@ WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
 # -----------------------------------------------------------------------------
 # DNS settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 declare -A myDNSs=(							# (needs BASH_VERSION >= 4)
 	[comcastbusiness.net]=work				# compound assignment
 	[zipcar.com]=work						# left-hand side must be unique
@@ -128,7 +129,7 @@ declare -A myDNSs=(							# (needs BASH_VERSION >= 4)
 # -----------------------------------------------------------------------------
 # Wi-Fi settings ~ used if specified in tryLocationMethods() above
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 declare -A myWifis=(						# (needs BASH_VERSION >= 4)
 	[Apple]=work							# compound assignment
 	[Zipcar]=work							# left-hand side must be unique
@@ -215,8 +216,10 @@ doLocByDNS() {
 	# $2 must be an associatve array
 	if ( ! (( ${#2} )) && [[ "$(declare -p $2)" =~ "declare -a" ]] ) ; then return $FAILURE ; fi
 	# process arguments passed into the function
-    local domainArrayReference=$1[@]
-    local domainArray=("${!domainArrayReference}")
+# TO-DO: figure out how to properly deal with error SC2125 below; it bugs me
+# shellcheck disable=SC2125
+	local domainArrayReference=$1[@]
+	local domainArray=("${!domainArrayReference}")
 	declare -n dnss=$2						# how one passes associative arrays
 
 	# sanity-check inputs before moving on
@@ -307,7 +310,7 @@ doLocByDateTime() {
 # Test the major functions with a variety of inputs
 # °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º°`°º¤ø,¸,
 
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 t=(	[0]=pass [1]=fail )						# array pairs codes to readable text
 # if what you expected == what actually happened, be happy
 passFail() { if (( $1 == $2 )) ; then echo -n "success" ; else echo -n "failure" ; fi }
@@ -315,7 +318,7 @@ passFail() { if (( $1 == $2 )) ; then echo -n "success" ; else echo -n "failure"
 # -----------------------------------------------------------------------------
 # Every function to test (with arguments) and the expected result.
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2016,SC2034
 declare -A allTheTests=(					# (needs BASH_VERSION >= 4)
 
 	# -----|  doLocByDateTime  |-----------------------------------------------
@@ -348,9 +351,9 @@ doAllTheTests() {
 	declare -n tests=$1						# how one passes associative arrays
 
 	# ----- iterate over array of tests ---------------------------------------
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 	__i__=1									# just a simple counter
-# shellcheck disable=SC2034					# appears unused
+# shellcheck disable=SC2034
 	__l__=${#tests[@]}						# total number of tests
 	for c in "${!tests[@]}" ; do				# iterate over the array of tests
 		# run test
@@ -421,6 +424,7 @@ doArchSpecifics() {
 # -----------------------------------------------------------------------------
 # Do OS-specific things.
 # -----------------------------------------------------------------------------
+# shellcheck disable=2034
 doOsSpecifics() {
 	local os=${OSTYPE//[0-9.]/}				# get text part of the OS name and
 	os=${os,,}								# lowercase normalize it then
@@ -454,8 +458,8 @@ EOT
 			kilmdn='sudo killall -HUP mDNSResponder'	# 10.12, 10.11, 10.10.4+
 			discov='sudo discoveryutil mdnsflushcache'	# 10.10.{1-3}
 			# udnsfl='sudo mdnsfutil udnsflushcaches'	# alleged 10.4 ~ undocumented
-			dscache='sudo dscacheutil -flushcache'		# 10.6
-			lookupd='sudo lookupd -flushcache'			# 10.5
+			dscache='sudo dscacheutil -flushcache'	# 10.6
+			lookupd='sudo lookupd -flushcache'		# 10.5
 			# mdnsfl='sudo mdnsfutil mdnsflushcache'	# alleged unknown os ver
 
 			# -----------------------------------------------------------------
@@ -473,7 +477,7 @@ EOT
 					f="$kilmdn"
 					;;
 				10.10) # -------------------------- # Yosemite
-					if (( ( ${vparts[2]} >= 1 ) && ( ${vparts[2]} <= 3 ) )) ; then
+					if (( ( vparts[2] >= 1 ) && ( vparts[2] <= 3 ) )) ; then
 						f="$discov"
 					else
 						f="$kilmdn"
@@ -487,7 +491,7 @@ EOT
 					f="$kilmdn"
 					;;
 				10.6) # --------------------------- # Snow Leopard
-					f="dscache"
+					f="$dscache"
 					;;
 				10.5) # --------------------------- # Leopard
 					f="$lookupd"
@@ -511,12 +515,13 @@ EOT
 			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
 
 			# enable git completion
-			source $( brew --prefix git)/etc/bash_completion.d/git-completion.bash
+			source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
 			;;	# end darwin
 		# ---------------------------------------------------------------------
 		linux)
 			alias ls='ls --color --classify' # make ls colorful
 			today=$(date "+%Y%m%d")			# needed for logs
+# shellcheck disable=SC2139
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
 			;;
 
@@ -553,11 +558,9 @@ doHostThings() {
 	# Do more complicated tests to customize one way for multiple machines.
 	# -------------------------------------------------------------------------
 	# work machine, on-line and off-line names
-	if [ "$HOSTNAME" = 'michael.local' \
-		-o "$HOSTNAME" = 'michael.at_]work.com' ] ;
+	if [ "$HOSTNAME" = 'michael.local' ] || [ "$HOSTNAME" = 'michael.at_work.com' ] ;
 	then
-# shellcheck disable=SC2034					# appears unused
-                unused='needed a placeholder in this clause'
+                true # unused stub
 
 		# ---------------------------------------------------------------------
 
@@ -678,11 +681,6 @@ alias g='git'								# save 66% of typing
 complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
 function ga() { git add "$1"\ ; }			# add files to be tracked
 function gc() { git commit -m "$@" ; }		# commit changes locally
-
-
-alias showpath="echo \"${PATH//:/$'\n'}\""
-alias showpath="echo ${PATH//:/$'\n'}"
-
 function showpath() { echo "${PATH//:/$'\n'}" ; }
 
 alias gd='git diff'							# see what happened
@@ -715,6 +713,7 @@ alias en="exiftool -all="
 alias mvmd5='mv ????????????????????????????????.* /Volumes/foobar/pix/'
 # my whole exiftool work-flow
 GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
+# shellcheck disable=2139
 alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 
 # -----------------------------------------------------------------------------
@@ -782,7 +781,7 @@ extract () {
 # Zipcar stuff
 # -----------------------------------------------------------------------------
 if /usr/bin/which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
-# shellcheck source="/Users/msattler/"		# where to find the following file
+# shellcheck source="/Users/msattler/"
 source ~/.profile							# for rvm
 #source $HOME/.bash_profile_zipcar			# zipcar-specific dev resources
 
