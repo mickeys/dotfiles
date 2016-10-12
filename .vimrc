@@ -1,5 +1,6 @@
 source /Users/msattler/Library/Python/2.7/lib/python/site-packages/powerline/bindings/vim/plugin/powerline.vim
 "
+set printoptions=header:0		" don't print page headers0
 set guifont=Inconsolata\ for\ Powerline:h15
 let g:Powerline_symbols = 'fancy'
 set encoding=utf-8
