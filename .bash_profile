@@ -782,7 +782,6 @@ extract () {
 # -----------------------------------------------------------------------------
 if /usr/bin/which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
 # shellcheck source="/Users/msattler/"
-source ~/.profile							# for rvm
 #source $HOME/.bash_profile_zipcar			# zipcar-specific dev resources
 
 export ANDROID_HOME=~/Library/Android/sdk
