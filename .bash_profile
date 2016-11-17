@@ -56,13 +56,15 @@
 # This is a feature, not a bug. Update your bash to a modern one. This has been
 # tested mostly on macOS 10.12 (Sierra), with side-trips to several Linuxes.
 # -----------------------------------------------------------------------------
+if ((BASH_VERSINFO[0] < 4)); then echo "Error: bash 4.0 or later needed; quitting." >&2; exit 1; fi
+
 PROFILING=0									# TO-DO: document profiling
 if (( PROFILING )) ; then					#
 #	PS4='+\t '
 #	PS4='$(date "+%s.%N ($LINENO) + ")'
 #	PS4='$(date "+%3N ($LINENO) + ")'		# 6N=microseconds
 	PS4='$(date "+_%S_%6N_ ($LINENO) + ")'		# secs & 9=nano, 6=milli, 3=micro
-	exec 3>&2 2>/Users/msattler/bashstart.$$.log
+	exec 3>&2 2>/Users/michael/bashstart.$$.log
 	set -xT
 else
 	PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -74,7 +76,7 @@ fi
 # script's behavior.
 # -----------------------------------------------------------------------------
 if [[ ! $TEST_YOKE ]] ; then				# we being invoked from outside?
-	DEBUG='' # 'YES'						# default: no debugging output
+	DEBUG='YES' # 'YES'						# default: no debugging output
 	RUN_TESTS='' # 'YES'					# default: production, not QA tests
 	declare -g SILENT='YES' # ''			# default: silent running
 #else
@@ -121,7 +123,7 @@ WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
 # shellcheck disable=SC2034
 declare -A myDNSs=(							# (needs BASH_VERSION >= 4)
 	[comcastbusiness.net]=work				# compound assignment
-	[zipcar.com]=work						# left-hand side must be unique
+	[credenceid.com]=work					# left-hand side must be unique
 	[comcast.net]=home
 	[shaw.net]=home
 )
@@ -132,7 +134,8 @@ declare -A myDNSs=(							# (needs BASH_VERSION >= 4)
 # shellcheck disable=SC2034
 declare -A myWifis=(						# (needs BASH_VERSION >= 4)
 	[Apple]=work							# compound assignment
-	[Zipcar]=work							# left-hand side must be unique
+	[Squirrel]=work							# left-hand side must be unique
+	[Credence Air]=work
 	[bbhome]=home
 	[Winter Home]=home
 )
@@ -205,6 +208,7 @@ getDomainnames() {
 		d[${#d[@]}]=$(echo "$fqdn" | rev | cut -d. -f1,2 | rev)
 		# --> comcast.net
 	fi
+	debug "out = \"$d[${#d[@]}]\""
 }
 
 # -----------------------------------------------------------------------------
@@ -286,6 +290,7 @@ doLocByDateTime() {
 	then
 		debug "work (daytime weekday)"		# tell the debugging human
 		where='work'						# remember the location
+		echo "HI HERE WORK"
 	# -------------------------------------------------------------------------
 	elif (( ( day >= mon && day <= fri ) &&
 		( hour < dayStarts || hour > dayEnds ) )) ;
@@ -577,8 +582,12 @@ doHostThings() {
 # use powerline and gitstatus-powerline for prompts & status lines (or go
 # old-school on systems without it installed)
 # -----------------------------------------------------------------------------
-POWERLINE_PATH=$(/usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
 if [[ "$POWERLINE_PATH" != "" ]]; then
+	PATH="$PATH:$POWERLINE_PATH/../scripts/"
+	powerline-daemon -q
+	POWERLINE_BASH_CONTINUATION=1
+	POWERLINE_BASH_SELECT=1
 	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
 else
 	dir="${BASH_SOURCE%/*}"					# point to this script's location
@@ -587,7 +596,6 @@ else
 	. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
 	setTermPrompt							# use old-school prompt
 fi
-
 # -----------------------------------------------------------------------------
 # Do command aliasing. Works on any bash version.
 # -----------------------------------------------------------------------------
@@ -598,8 +606,9 @@ fi
 alias h='history'							# see what happened before
 HISTCONTROL=ignoreboth						# don't add duplicates, etc.
 HISTFILE=~/.bash_eternal_history			# "eternal" ~ don't get truncated
-HISTFILESIZE=								# "eternal" ~ no max size
-HISTSIZE=									# "eternal" ~ no max size
+# was eternal (empty); now set at 999 (three digits easier to grok)
+HISTFILESIZE=999							# "eternal" ~ no max size
+HISTSIZE=999								# "eternal" ~ no max size
 HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
 shopt -s checkwinsize						# after each command check window size...
 shopt -s histappend							# append, don't overwrite, history file
@@ -615,7 +624,7 @@ then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
 # -----------------------------------------------------------------------------
 # general things, alphabetically
 # -----------------------------------------------------------------------------
-alias brewski='brew update && brew upgrade --all && brew cleanup; brew doctor'
+alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
 alias c="clear"								# clear the terminal screen
 alias ~="cd ~"                              # Go to the home directory
 alias cd..='cd ../'                         # Go back 1 directory level (for fast typers)
@@ -778,14 +787,42 @@ extract () {
 
 #TO-DO: put the following in a doHome() doWork() doElsewhere()
 # -----------------------------------------------------------------------------
-# Zipcar stuff
+# Credence ID
 # -----------------------------------------------------------------------------
-if /usr/bin/which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
-# shellcheck source="/Users/msattler/"
-#source $HOME/.bash_profile_zipcar			# zipcar-specific dev resources
-
+# shellcheck source="/Users/michael/"
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
+export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+CREDENCEID="~/Documents/cid"
+alias cid="cd $CREDENCEID/devops/"
+# --- workflow shortcuts ---
+set ADB_TRACE=1
+alias ab='adb reboot-bootloader'
+alias ac='adb logcat | grep com.credenceid'
+alias ad='adb devices'
+alias ak='adb kill-server ; adb start-server'
+alias al="adb shell 'echo mylockname >/sys/power/wake_lock'"
+alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
+alias ar='adb reboot'
+alias au="adb shell 'echo mylockname >/sys/power/wake_unlock'"
+alias aw='adb wait-for-device ; adb devices'
+alias d="$CREDENCEID/dn.sh"
+alias e="$CREDENCEID/emmc_upgrade.sh"
+alias fb='fastboot -i 0x525'
+alias fc='fastboot -i 0x525 continue'
+alias fd='fastboot -i 0x525 devices'
+alias fr='fastboot -i 0x525 reboot'
+alias uu="fastboot -i 0x525 $TARGET oem unlock B73AC261"
+alias x='c ; grc upgrade_boards-adb.sh'
+# ----
+alias sdk="pd ./__SPECIAL_STUFFS__ ; adb $TARGET uninstall com.credenceid.sdkapp ; adb $TARGET install CredenceSdkApp-YASH.apk ; popd"
+alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb $TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb $TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
+
+# -----------------------------------------------------------------------------
+# wrapper is ~/bin/serial
+#alias serial="screen `ls /dev/cu.usbserial-*` 115200 –L"
+alias ptys="ls /dev/cu.usbserial-*"
+alias fix='reset; stty sane; tput rs1; clear; echo -e "\033c"'
 
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 # <<---|  The end of the defined functions. Following is the main body. |---->>
@@ -818,11 +855,13 @@ MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"	# both needed?
 # -----------------------------------------------------------------------------
 PY_BIN=$(python -c 'import sys; print sys.prefix')'/bin'	# ask Python right spot
 if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
+
 #PATH=/opt/ImageMagick:$PATH				# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"	# GNU
 #PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 cleanPath									# remove duplicates from PATH
+PATH="$PATH:$CREDENCEID/bin"
 PATH=~/bin:$PATH							# my personal projects first :-)
 export PATH									# share and enjoy!
 
@@ -838,4 +877,8 @@ fi
 # Setting PATH for Python 2.7
 # The original version is saved in .bash_profile.pysave
 PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:${PATH}"
+#
+# lastly, put my existing, work, & personal bin dirs at the front of PATH
+PATH=.:~/bin:~/Documents/cid/bin:$PATH		# cwd, my bin, work bin
+
 export PATH
