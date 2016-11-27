@@ -5,7 +5,7 @@
 #IFS=$'\n\t'
 
 # -----------------------------------------------------------------------------
-# I've used a frightening & bewildering variety of UN*X distros since the early
+# I've used a frightening & bewildering variety of *nix distros since the early
 # 1980s. One thing all of them had in common was this "run-commands" file; it's
 # that important to have machine-specific resources and commands configured and
 # aliased appropriately. Rather than have 40 different versions ~ yes, really:
@@ -13,7 +13,7 @@
 # on PDP-8|10, MIPS, ARM, MC68000, SPARC; from Sun, H-P, Apple ~ crafting one
 # file to be synced to all my working computers was integral to keeping me sane.
 #
-# Originally this only tested for hostname. Because I worked on many a UN*X farm
+# Originally this only tested for hostname. Because I worked on many a *nix farm
 # I added machine architecture (chipset) and operating system testing, avoiding
 # the need to specify each hostname I moved to. DNS (network identification) was
 # next, to switch between home and various client set-ups.
@@ -48,13 +48,14 @@
 # Lastly, tweaks to the command search path are done.
 # 
 # I'll explain the configuration options in each of the sections below. Feel
-# free to use this as a jumping-off point in tweaking your own UN*X machines.
+# free to use this as a jumping-off point in tweaking your own *nix machines.
 # 
 # Find me at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 # QA NOTE: if $BASH_VERSION < v4 parts of this script will silently not execute.
 # This is a feature, not a bug. Update your bash to a modern one. This has been
 # tested mostly on macOS 10.12 (Sierra), with side-trips to several Linuxes.
+# UPDATE: Things were breaking badly, so now >= 4 now required. Progress :-/
 # -----------------------------------------------------------------------------
 if ((BASH_VERSINFO[0] < 4)); then echo "Error: bash 4.0 or later needed; quitting." >&2; exit 1; fi
 
@@ -63,9 +64,9 @@ if (( PROFILING )) ; then					#
 #	PS4='+\t '
 #	PS4='$(date "+%s.%N ($LINENO) + ")'
 #	PS4='$(date "+%3N ($LINENO) + ")'		# 6N=microseconds
-	PS4='$(date "+_%S_%6N_ ($LINENO) + ")'		# secs & 9=nano, 6=milli, 3=micro
-	exec 3>&2 2>/Users/michael/bashstart.$$.log
-	set -xT
+	PS4='$(date "+_%S_%6N_ ($LINENO) + ")'	# secs & 9=nano, 6=milli, 3=micro
+	exec 3>&2 2>${HOME}/bashstart.$$.log	#
+	set -xT									#
 else
 	PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 fi
@@ -90,8 +91,8 @@ if [[ $SILENT ]] ; then SILENT='>& /dev/null'	; fi # overloading
 # -----------------------------------------------------------------------------
 # Constants:
 # -----------------------------------------------------------------------------
-SUCCESS=0									# standard UN*X return code
-FAILURE=1									# standard UN*X return code
+SUCCESS=0									# standard *nix return code
+FAILURE=1									# standard *nix return code
 isNumber='^[0-9]+$'							# regexp ~ [[ $var =~ $isNumber ]]
 # shellcheck disable=SC2034
 myDomain=''									# initialize empty before use
@@ -111,11 +112,34 @@ sun=7										# $(date +'%u') returns [0..7]
 # -----------------------------------------------------------------------------
 tryLocationMethods=( DNS WIFI DATE )		# choose from DNS WIFI DATE
 where=''									# final answer stored here
-skipCheckOnThese=( 'pippin.apple.com' )		# self-evident location
+skipCheckOnThese=( 'my_office.apple.com' )	# skip any self-evident location(s)
 dayStarts=9									# time of day 0..23 ~ work starts
 dayEnds=17									# time of day 0..23 ~ work ends
-AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
-WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
+
+# -----------------------------------------------------------------------------
+# How do we, in your *nix, find the Wi-Fi network to which we're connected?
+# -----------------------------------------------------------------------------
+local os=${OSTYPE//[0-9.]/}					# get text part of the OS name and
+os=${os,,}									# lowercase normalize it then
+case "$os" in								# do OS-appropriate things
+	# ---------------------------------------------------------------------
+	darwin)									# Mac OS X
+
+		AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
+		WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
+		;; # end darwin
+	# ---------------------------------------------------------------------
+	linux)
+		;; # end linux
+
+	# ---------------------------------------------------------------------
+	linux-gnu)								# Fedora
+		;; # end linux-gnu
+
+	# ---------------------------------------------------------------------
+	*) echo "NOTE: Unknown operating system \"os\", can't find Wi-Fi!"
+	;;
+esac
 
 # -----------------------------------------------------------------------------
 # DNS settings ~ used if specified in tryLocationMethods() above
@@ -437,6 +461,30 @@ doOsSpecifics() {
 	case "$os" in							# do OS-appropriate things
 		# ---------------------------------------------------------------------
 		darwin)								# Mac OS X
+
+			alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
+			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+			alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
+			alias ll='ls -FGlAhp'
+			alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
+			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
+			alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
+			alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
+			trash() { mv "$@" ~/.Trash; }		# move to trash (vs deleting asap)
+			#tw() { open -a /Applications/TextWrangler.app/ "$1" }	# my GUI editor
+
+			# -----------------------------------------------------------------
+			# Display Wi-Fi network password for one previously connected...
+			# Usage: wifipass "some wifi network name"
+			# -----------------------------------------------------------------
+			alias wifipass="security find-generic-password -g -D \"AirPort network password\" -a"
+
+			# -----------------------------------------------------------------
+			# Display Wi-Fi signal strength
+			# -----------------------------------------------------------------
+			alias wifipow="/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -s"
+
 			# -----------------------------------------------------------------
 			# cd (pushd) to the macOS's foremost Finder window 
 			# -----------------------------------------------------------------
@@ -521,6 +569,8 @@ EOT
 
 			# enable git completion
 			source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
+		    export BLOCKSIZE=1k				# default blocksize for ls, df, du
+
 			;;	# end darwin
 		# ---------------------------------------------------------------------
 		linux)
@@ -528,11 +578,11 @@ EOT
 			today=$(date "+%Y%m%d")			# needed for logs
 # shellcheck disable=SC2139
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
-			;;
+			;; # end linux
 
 		# ---------------------------------------------------------------------
 		linux-gnu)							# Fedora
-			;;
+			;; # end linux-gnu
 
 		# ---------------------------------------------------------------------
 		*) echo "NOTE: Unknown operating system \"os\"!"
@@ -581,6 +631,8 @@ doHostThings() {
 # -----------------------------------------------------------------------------
 # use powerline and gitstatus-powerline for prompts & status lines (or go
 # old-school on systems without it installed)
+#
+# FYI: configs in /Users/michael/.config/powerline/themes/shell/
 # -----------------------------------------------------------------------------
 POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
 if [[ "$POWERLINE_PATH" != "" ]]; then
@@ -597,14 +649,34 @@ else
 	setTermPrompt							# use old-school prompt
 fi
 # -----------------------------------------------------------------------------
-# Do command aliasing. Works on any bash version.
+# All-*nix do everywhere command aliasing. Works on all bash.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# UN*X command history
+# less ~ the enhanced version of the 'more' page viewer
+# -----------------------------------------------------------------------------
+alias more='less'							# alias to use less
+export LC_ALL=en_US.UTF-8					# language variable to rule them all
+export LANG=en_us.UTF-8						# char set
+export PAGER=less							# tell the system to use less
+export LESSCHARSET='utf-8'					# was 'latin1'
+export LESSOPEN='|/usr/bin/lesspipe.sh %s 2>&-' # Use if lesspipe.sh exists
+export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
+
+# LESS man page colors (makes Man pages more readable).
+export LESS_TERMCAP_mb=$'\E[01;31m'
+export LESS_TERMCAP_md=$'\E[01;31m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_ue=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[01;32m'
+
+# -----------------------------------------------------------------------------
+# *nix command history
 # -----------------------------------------------------------------------------
 alias h='history'							# see what happened before
-HISTCONTROL=ignoreboth						# don't add duplicates, etc.
+HISTCONTROL=ignoredups:erasedups:ignorespace # no dups; 
 HISTFILE=~/.bash_eternal_history			# "eternal" ~ don't get truncated
 # was eternal (empty); now set at 999 (three digits easier to grok)
 HISTFILESIZE=999							# "eternal" ~ no max size
@@ -613,6 +685,11 @@ HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
 shopt -s checkwinsize						# after each command check window size...
 shopt -s histappend							# append, don't overwrite, history file
 
+
+# Avoid duplicates
+export HISTCONTROL=
+# When the shell exits, append to the history file instead of overwriting it
+shopt -s histappend
 # -----------------------------------------------------------------------------
 # other environment settings
 # -----------------------------------------------------------------------------
@@ -622,9 +699,8 @@ if [ -f "$(brew --prefix)/etc/bash_completion" ] ;	# if bash completion exists
 then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
 
 # -----------------------------------------------------------------------------
-# general things, alphabetically
+# generally things for all the *nix, alphabetically
 # -----------------------------------------------------------------------------
-alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
 alias c="clear"								# clear the terminal screen
 alias ~="cd ~"                              # Go to the home directory
 alias cd..='cd ../'                         # Go back 1 directory level (for fast typers)
@@ -640,37 +716,36 @@ alias .6='cd ../../../../../../'            # Go back 6 directory levels
      
 #alias cpbash='scp ~/.bash_profile USERNAME_OVER_THERE@hostname:'
 alias e="exit"								# end this shell
-alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
 alias grepc='grep --color=auto'				# grep shows matched in color
 alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
 alias kurl='curl -#O'						# download and save w orig filename
-alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
 alias ll='ls -lAhF'							# ls w kb, mb, gb
-alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
-#alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | less' # lr ~ fully-recursive directory listing
+alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias ls="ls -F"							# ls special chars
-alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
 alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
 alias pd='pushd'							# see also 'popd'
-alias ps='ps -creo command,pid,%cpu | head -10'
+alias psall='ps -afx'
+alias pstop='ps -creo command,pid,%cpu | head -10'
 #alias python="python3"						# p3 libs incompat with p2
-alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
 alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
 alias sink='sync;sync;sync'					# write filesystem changes
 alias sp='source ~/.bash_profile'
-alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
-alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
 alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
 alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
 alias vi='vim'								# colored vi editor
 alias which='type -all'                     # find executables
+
+path() { echo "${PATH//:/$'\n'}" ; }
 mcd () { mkdir -p "$1" && cd "$1" || exit ; }        # makes new dir and jump inside
 #goog { open "https://google.com/search?q=$*" } # google from command-line
-trash() { mv "$@" ~/.Trash; }		# move to trash (vs deleting asap)
-#tw() { open -a /Applications/TextWrangler.app/ "$1" }	# my GUI editor
 xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac } # toggle debugging
+mans () { man $1 | grep -iC2 --color=always $2 | $PAGER } # search man $1 for text $2
+
+# showa: to remind yourself of an alias (given some part of it)
+showa () { /usr/bin/grep --color=always -i -a1 $@ ~/.bash_profile | grep -v '^\s*$' | less -FSRXc ; }
+zipf () { zip -r "$1".zip "$1" ; }          # create zip archive of a folder
 
 # -----------------------------------------------------------------------------
 # terminal color
@@ -690,7 +765,6 @@ alias g='git'								# save 66% of typing
 complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
 function ga() { git add "$1"\ ; }			# add files to be tracked
 function gc() { git commit -m "$@" ; }		# commit changes locally
-function showpath() { echo "${PATH//:/$'\n'}" ; }
 
 alias gd='git diff'							# see what happened
 alias gi='git check-ignore -v *'			# see what's being ignored
@@ -726,26 +800,6 @@ GRAPHICS='IMG* *.jpeg *.jpg *.gif *.png'
 alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 
 # -----------------------------------------------------------------------------
-# less ~ the enhanced version of the 'more' page viewer
-# -----------------------------------------------------------------------------
-alias more='less'							# alias to use less
-export LC_ALL=en_US.UTF-8					# language variable to rule them all
-export LANG=en_us.UTF-8						# char set
-export PAGER=less							# tell the system to use less
-export LESSCHARSET='utf-8'					# was 'latin1'
-export LESSOPEN='|/usr/bin/lesspipe.sh %s 2>&-' # Use if lesspipe.sh exists
-export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
-
-# LESS man page colors (makes Man pages more readable).
-export LESS_TERMCAP_mb=$'\E[01;31m'
-export LESS_TERMCAP_md=$'\E[01;31m'
-export LESS_TERMCAP_me=$'\E[0m'
-export LESS_TERMCAP_se=$'\E[0m'
-export LESS_TERMCAP_so=$'\E[01;44;33m'
-export LESS_TERMCAP_ue=$'\E[0m'
-export LESS_TERMCAP_us=$'\E[01;32m'
-
-# -----------------------------------------------------------------------------
 # web development
 # -----------------------------------------------------------------------------
 alias aedit='sudo edit /etc/httpd/httpd.conf'	# edit Apache httpd.conf
@@ -760,6 +814,25 @@ httpdebug () { /usr/bin/curl "$@" -o /dev/null -w "dns: %{time_namelookup} conne
 # -----------------------------------------------------------------------------
 alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
 alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
+
+# -----------------------------------------------------------------------------
+# cd to frontmost macOS Finder window
+# -----------------------------------------------------------------------------
+cdf () {
+	currFolderPath=$( /usr/bin/osascript <<EOT
+		tell application "Finder"
+			try
+		set currFolder to (folder of the front window as alias)
+			on error
+		set currFolder to (path to desktop folder as alias)
+			end try
+			POSIX path of currFolder
+		end tell
+EOT
+	)
+	echo "cd to \"$currFolderPath\""
+	cd "$currFolderPath"
+}
 
 # -----------------------------------------------------------------------------
 # extract best-known archives with one command
@@ -794,17 +867,19 @@ export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 CREDENCEID="~/Documents/cid"
-alias cid="cd $CREDENCEID/devops/"
+alias cid="cd $CREDENCEID/devops/2r-trident/nix"
 # --- workflow shortcuts ---
 set ADB_TRACE=1
 alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
 alias ak='adb kill-server ; adb start-server'
-alias al="adb shell 'echo mylockname >/sys/power/wake_lock'"
-alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
+#alias al="adb shell 'echo mylockname >/sys/power/wake_lock'"
+#alias au="adb shell 'echo mylockname >/sys/power/wake_unlock'"
+#alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
+alias ap='adb push'
 alias ar='adb reboot'
-alias au="adb shell 'echo mylockname >/sys/power/wake_unlock'"
+alias as='adb shell'
 alias aw='adb wait-for-device ; adb devices'
 alias d="$CREDENCEID/dn.sh"
 alias e="$CREDENCEID/emmc_upgrade.sh"
@@ -814,9 +889,10 @@ alias fd='fastboot -i 0x525 devices'
 alias fr='fastboot -i 0x525 reboot'
 alias uu="fastboot -i 0x525 $TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
-# ----
+# ---- one-offs useful for a short time ----
 alias sdk="pd ./__SPECIAL_STUFFS__ ; adb $TARGET uninstall com.credenceid.sdkapp ; adb $TARGET install CredenceSdkApp-YASH.apk ; popd"
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb $TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb $TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
+alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
 
 # -----------------------------------------------------------------------------
 # wrapper is ~/bin/serial
@@ -828,7 +904,7 @@ alias fix='reset; stty sane; tput rs1; clear; echo -e "\033c"'
 # <<---|  The end of the defined functions. Following is the main body. |---->>
 # <<---+----+----+----+----+----+----+----+----+----+----+----+----+----+---->>
 
-getDomainnames								# find all the domainnames we can
+getDomainnames								# find all the domainnames
 if [[ $RUN_TESTS ]] ; then
 	echo "$(date +'%H:%M:%S') ~ start"		# °º¤ø,¸¸,ø¤º°`°º¤ø,¸,ø¤°º¤ø,¸¸,ø¤º
 	doAllTheTests allTheTests				# º Run all the tests             º
@@ -841,12 +917,25 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Manage $PATH and $MANPATH. Put your customizations before $PATH to have them
-# used instead of built-ins.
+# Housekeeping for regular use, debugging, and calling from a QA test yoke.
 # -----------------------------------------------------------------------------
-MANPATH=/opt/local/share/man:$MANPATH		# MacPorts
-# TO-DO: fix ~ MANPATH="/usr/local/opt/coreutils/libexe‌​c/gnuman:${MANPA‌NTH-/usr/shar‌e/man}"
+unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset TEST_YOKE # QA stuff
+#set +uo
+if (( PROFILING )) ; then 
+	set +x
+	exec 2>&3 3>&-
+fi
+
+# -----------------------------------------------------------------------------
+# Manage $PATH and $MANPATH.
+# -----------------------------------------------------------------------------
+# GNU ---- TO-DO: fix ~ MANPATH="/usr/local/opt/coreutils/libexe‌​c/gnuman:${MANPA‌NTH-/usr/shar‌e/man}"
 MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"	# both needed?
+PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"	# GNU
+#PATH=/opt/ImageMagick:$PATH				# ImageMagick
+PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
+#MANPATH=/opt/local/share/man:$MANPATH		# MacPorts
+#PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
 
 # -----------------------------------------------------------------------------
 # Ask Python to help in finding the binaries directory; then double-check. This
@@ -856,29 +945,17 @@ MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"	# both needed?
 PY_BIN=$(python -c 'import sys; print sys.prefix')'/bin'	# ask Python right spot
 if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 
-#PATH=/opt/ImageMagick:$PATH				# ImageMagick
-PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
-PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"	# GNU
-#PATH=/opt/local/bin:/opt/local/sbin:$PATH	# MacPorts
-cleanPath									# remove duplicates from PATH
-PATH="$PATH:$CREDENCEID/bin"
-PATH=~/bin:$PATH							# my personal projects first :-)
-export PATH									# share and enjoy!
-
 # -----------------------------------------------------------------------------
-# Housekeeping for regular use, debugging, and calling from a QA test yoke.
+# Setting PATH for Python 2.7. Original version saved in .bash_profile.pysave
 # -----------------------------------------------------------------------------
-unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset TEST_YOKE # QA stuff
-#set +uo
-if (( PROFILING )) ; then 
-	set +x
-	exec 2>&3 3>&-
-fi
-# Setting PATH for Python 2.7
-# The original version is saved in .bash_profile.pysave
 PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:${PATH}"
-#
-# lastly, put my existing, work, & personal bin dirs at the front of PATH
-PATH=.:~/bin:~/Documents/cid/bin:$PATH		# cwd, my bin, work bin
 
-export PATH
+# -----------------------------------------------------------------------------
+# Lastly, put my stuff at the front of PATH so it's found and used first.
+# -----------------------------------------------------------------------------
+__WORK_BIN="${CREDENCEID}/devops/bin:${CREDENCEID}/bin"	# work code
+__PERS_BIN="~/bin"							# personal executable binaries
+PATH=.:${__PERS_BIN}:${__WORK_BIN}:$PATH	# cwd, my bin, work bin
+
+cleanPath									# remove duplicates from PATH
+export PATH									# share and enjoy!
