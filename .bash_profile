@@ -1,4 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash
+#set -x
 # shellcheck disable=1090,1091
 ####!/usr/bin/env bash
 #set -u #o pipefail							# unofficial bash strict mode
@@ -222,8 +223,10 @@ getDomainnames() {
 	# -------------------------------------------------------------------------
 	# Method 2: get domain from your ISP
 	# -------------------------------------------------------------------------
-	if eval nc -z -w 1 google.com 80 "$SILENT" ; then # only if network up
-		external_ip="$( dig +short myip.opendns.com @resolver1.opendns.com )"
+	if eval nc -z -w 1 google.com 80 "$SILENT" ; then # only if network is up
+		#external_ip="$( dig +short myip.opendns.com @resolver1.opendns.com )"
+		external_ip=$( host -t txt o-o.myaddr.l.google.com 8.8.8.8 |
+          grep -oP "client-subnet \K(\d{1,3}\.){3}\d{1,3}" )
 		# --> like 1.2.3.4
 		fqdn=$( host "$external_ip" )
 		# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net.
@@ -233,7 +236,7 @@ getDomainnames() {
 		# --> comcast.net
 	fi
 	# shellcheck disable=SC2128
-	debug "out = \"$d[${#d[@]}]\""
+	debug "fqdn parsing results in \"$d[${#d[@]}]\""
 }
 
 # -----------------------------------------------------------------------------
@@ -738,7 +741,8 @@ alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
 alias vi='vim'								# colored vi editor
 alias which='type -all'                     # find executables
 
-path() { echo "${PATH//:/$'\n'}" ; }
+###remove### path() { echo "${PATH//:/$'\n'}" ; }
+
 mcd () { mkdir -p "$1" && cd "$1" || exit ; }        # makes new dir and jump inside
 #goog { open "https://google.com/search?q=$*" } # google from command-line
 xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac } # toggle debugging
