@@ -65,7 +65,7 @@ if (( PROFILING )) ; then					#
 #	PS4='$(date "+%s.%N ($LINENO) + ")'
 #	PS4='$(date "+%3N ($LINENO) + ")'		# 6N=microseconds
 	PS4='$(date "+_%S_%6N_ ($LINENO) + ")'	# secs & 9=nano, 6=milli, 3=micro
-	exec 3>&2 2>${HOME}/bashstart.$$.log	#
+	exec 3>&2 2>"${HOME}/bashstart.$$.log"	#
 	set -xT									#
 else
 	PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -119,7 +119,7 @@ dayEnds=17									# time of day 0..23 ~ work ends
 # -----------------------------------------------------------------------------
 # How do we, in your *nix, find the Wi-Fi network to which we're connected?
 # -----------------------------------------------------------------------------
-local os=${OSTYPE//[0-9.]/}					# get text part of the OS name and
+os=${OSTYPE//[0-9.]/}						# get text part of the OS name and
 os=${os,,}									# lowercase normalize it then
 case "$os" in								# do OS-appropriate things
 	# ---------------------------------------------------------------------
@@ -232,6 +232,7 @@ getDomainnames() {
 		d[${#d[@]}]=$(echo "$fqdn" | rev | cut -d. -f1,2 | rev)
 		# --> comcast.net
 	fi
+	# shellcheck disable=SC2128
 	debug "out = \"$d[${#d[@]}]\""
 }
 
@@ -636,10 +637,10 @@ doHostThings() {
 # -----------------------------------------------------------------------------
 POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
 if [[ "$POWERLINE_PATH" != "" ]]; then
-	PATH="$PATH:$POWERLINE_PATH/../scripts/"
+	PATH="$PATH:$POWERLINE_PATH/../scripts"
 	powerline-daemon -q
-	POWERLINE_BASH_CONTINUATION=1
-	POWERLINE_BASH_SELECT=1
+	export POWERLINE_BASH_CONTINUATION=1
+	export POWERLINE_BASH_SELECT=1
 	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
 else
 	dir="${BASH_SOURCE%/*}"					# point to this script's location
@@ -741,10 +742,10 @@ path() { echo "${PATH//:/$'\n'}" ; }
 mcd () { mkdir -p "$1" && cd "$1" || exit ; }        # makes new dir and jump inside
 #goog { open "https://google.com/search?q=$*" } # google from command-line
 xv() { case $- in *[xv]*) set +xv;; *) set -xv ;; esac } # toggle debugging
-mans () { man $1 | grep -iC2 --color=always $2 | $PAGER } # search man $1 for text $2
+#####mans () { man $1 | grep -iC2 --color=always $2 | $PAGER } # search man $1 for text $2
 
 # showa: to remind yourself of an alias (given some part of it)
-showa () { /usr/bin/grep --color=always -i -a1 $@ ~/.bash_profile | grep -v '^\s*$' | less -FSRXc ; }
+showa () { /usr/bin/grep --color=always -i -a1 "$@" ~/.bash_profile | grep -v '^\s*$' | less -FSRXc ; }
 zipf () { zip -r "$1".zip "$1" ; }          # create zip archive of a folder
 
 # -----------------------------------------------------------------------------
@@ -831,7 +832,7 @@ cdf () {
 EOT
 	)
 	echo "cd to \"$currFolderPath\""
-	cd "$currFolderPath"
+	cd "$currFolderPath" || exit
 }
 
 # -----------------------------------------------------------------------------
@@ -865,11 +866,14 @@ extract () {
 # shellcheck source="/Users/michael/"
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
-export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
-CREDENCEID="~/Documents/cid"
+export JAVA_HOME						# SC2155: Declare and assign separately
+JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+CREDENCEID="$HOME/Documents/cid"
+# shellcheck disable=SC2139
 alias cid="cd $CREDENCEID/devops/2r-trident/nix"
 # --- workflow shortcuts ---
-set ADB_TRACE=1
+# shellcheck disable=SC2128
+export ADB_TRACE=1
 alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
@@ -881,17 +885,19 @@ alias ap='adb push'
 alias ar='adb reboot'
 alias as='adb shell'
 alias aw='adb wait-for-device ; adb devices'
+# shellcheck disable=SC2139
 alias d="$CREDENCEID/dn.sh"
+# shellcheck disable=SC2139
 alias e="$CREDENCEID/emmc_upgrade.sh"
 alias fb='fastboot -i 0x525'
 alias fc='fastboot -i 0x525 continue'
 alias fd='fastboot -i 0x525 devices'
 alias fr='fastboot -i 0x525 reboot'
-alias uu="fastboot -i 0x525 $TARGET oem unlock B73AC261"
+alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
 # ---- one-offs useful for a short time ----
-alias sdk="pd ./__SPECIAL_STUFFS__ ; adb $TARGET uninstall com.credenceid.sdkapp ; adb $TARGET install CredenceSdkApp-YASH.apk ; popd"
-alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb $TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb $TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
+alias sdk="pd ./__SPECIAL_STUFFS__ ; adb \$TARGET uninstall com.credenceid.sdkapp ; adb \$TARGET install CredenceSdkApp-YASH.apk ; popd"
+alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
 
 # -----------------------------------------------------------------------------
@@ -929,9 +935,8 @@ fi
 # -----------------------------------------------------------------------------
 # Manage $PATH and $MANPATH.
 # -----------------------------------------------------------------------------
-# GNU ---- TO-DO: fix ~ MANPATH="/usr/local/opt/coreutils/libexe‌​c/gnuman:${MANPA‌NTH-/usr/shar‌e/man}"
-MANPATH="/usr/local/opt/gnu-tar/libexec/gnuman:$MANPATH"	# both needed?
-PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"	# GNU
+MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$MANPATH"	# GNU
+PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"		# GNU
 #PATH=/opt/ImageMagick:$PATH				# ImageMagick
 PATH=/usr/local/bin:/usr/local/sbin:$PATH	# Homebrew
 #MANPATH=/opt/local/share/man:$MANPATH		# MacPorts
@@ -954,7 +959,7 @@ PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:${PATH}"
 # Lastly, put my stuff at the front of PATH so it's found and used first.
 # -----------------------------------------------------------------------------
 __WORK_BIN="${CREDENCEID}/devops/bin:${CREDENCEID}/bin"	# work code
-__PERS_BIN="~/bin"							# personal executable binaries
+__PERS_BIN="$HOME/bin"						# personal executable binaries
 PATH=.:${__PERS_BIN}:${__WORK_BIN}:$PATH	# cwd, my bin, work bin
 
 cleanPath									# remove duplicates from PATH
