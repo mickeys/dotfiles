@@ -469,7 +469,8 @@ doOsSpecifics() {
 			alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
 			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
 			alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
-			alias ll='ls -FGlAhp'
+			alias ll='ls -FGlAhp'						# ls w kb, mb, gb
+			alias ls="ls -F --time-style=iso"			# ls special chars
 			alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
 			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
 			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
@@ -578,7 +579,8 @@ EOT
 			;;	# end darwin
 		# ---------------------------------------------------------------------
 		linux)
-			alias ls='ls --color --classify' # make ls colorful
+			alias ls='ls --color --classify --time-style=iso' # make ls colorful
+			alias ll='ls -lh --time-style long-iso'
 			today=$(date "+%Y%m%d")			# needed for logs
 # shellcheck disable=SC2139
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
@@ -723,9 +725,7 @@ alias e="exit"								# end this shell
 alias grepc='grep --color=auto'				# grep shows matched in color
 alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
 alias kurl='curl -#O'						# download and save w orig filename
-alias ll='ls -lAhF'							# ls w kb, mb, gb
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
-alias ls="ls -F"							# ls special chars
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
 alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
@@ -877,7 +877,7 @@ CREDENCEID="$HOME/Documents/cid"
 alias cid="cd $CREDENCEID/devops/2r-trident/nix"
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
-export ADB_TRACE=1
+#export ADB_TRACE=1
 alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
