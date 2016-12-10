@@ -470,7 +470,7 @@ doOsSpecifics() {
 			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
 			alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
 			alias ll='ls -FGlAhp'						# ls w kb, mb, gb
-			alias ls="ls -F --time-style=iso"			# ls special chars
+> 			alias ls='ls -F --time-style=iso'			# ls special chars'
 			alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
 			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
 			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
@@ -579,8 +579,8 @@ EOT
 			;;	# end darwin
 		# ---------------------------------------------------------------------
 		linux)
-			alias ls='ls --color --classify --time-style=iso' # make ls colorful
-			alias ll='ls -lh --time-style long-iso'
+			alias ls='ls --color --classify' # make ls colorful
+> 			alias ll='ls -lh --time-style long-iso'
 			today=$(date "+%Y%m%d")			# needed for logs
 # shellcheck disable=SC2139
 			alias ta="tail /etc/httpd/logs/${today}/error_log"
@@ -725,7 +725,9 @@ alias e="exit"								# end this shell
 alias grepc='grep --color=auto'				# grep shows matched in color
 alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
 alias kurl='curl -#O'						# download and save w orig filename
+alias ll='ls -lAhF'							# ls w kb, mb, gb
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
+alias ls="ls -F"							# ls special chars
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
 alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
@@ -773,7 +775,8 @@ function gc() { git commit -m "$@" ; }		# commit changes locally
 
 alias gd='git diff'							# see what happened
 alias gi='git check-ignore -v *'			# see what's being ignored
-alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'	# see what happened
+#alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
+alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
 alias gs='git status --short'				# see what's going on
 alias gp='git push -u origin master'		# send changes upstream
 alias gsl='git stash list'					# git-stash(1)
@@ -877,7 +880,7 @@ CREDENCEID="$HOME/Documents/cid"
 alias cid="cd $CREDENCEID/devops/2r-trident/nix"
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
-#export ADB_TRACE=1
+export ADB_TRACE=1
 alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
@@ -900,7 +903,9 @@ alias fr='fastboot -i 0x525 reboot'
 alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
 # ---- one-offs useful for a short time ----
-alias sdk="pd ./__SPECIAL_STUFFS__ ; adb \$TARGET uninstall com.credenceid.sdkapp ; adb \$TARGET install CredenceSdkApp-YASH.apk ; popd"
+__LATEST_SDK__="/Users/michael/Box Sync/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
+alias sdk="pd \"${__LATEST_SDK__/}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
+
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
 
