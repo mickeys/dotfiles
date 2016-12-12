@@ -573,6 +573,7 @@ EOT
 			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
 
 			# enable git completion
+			# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 			source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
 		    export BLOCKSIZE=1k				# default blocksize for ls, df, du
 
@@ -646,11 +647,14 @@ if [[ "$POWERLINE_PATH" != "" ]]; then
 	powerline-daemon -q
 	export POWERLINE_BASH_CONTINUATION=1
 	export POWERLINE_BASH_SELECT=1
+	# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
 	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
 else
 	dir="${BASH_SOURCE%/*}"					# point to this script's location
 	if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use PWD
+	# shellcheck source=/Users/michael/.set_colors.sh
 	. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
+	# shellcheck source=/Users/michael/.set_prompt.sh
 	. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
 	setTermPrompt							# use old-school prompt
 fi
@@ -701,8 +705,8 @@ shopt -s histappend
 # -----------------------------------------------------------------------------
 export EDITOR=/usr/bin/vim					# graphic text editor of choice
 # http://www.thegeekstuff.com/2013/12/bash-completion-complete/
-if [ -f "$(brew --prefix)/etc/bash_completion" ] ;	# if bash completion exists
-then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
+# shellcheck source=/usr/local/etc/bash_completion
+if [ -f "$(brew --prefix)/etc/bash_completion" ] ; then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
 
 # -----------------------------------------------------------------------------
 # generally things for all the *nix, alphabetically
@@ -880,7 +884,7 @@ CREDENCEID="$HOME/Documents/cid"
 alias cid="cd $CREDENCEID/devops/2r-trident/nix"
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
-export ADB_TRACE=1
+export ADB_TRACE=0
 alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
@@ -892,6 +896,7 @@ alias ap='adb push'
 alias ar='adb reboot'
 alias as='adb shell'
 alias aw='adb wait-for-device ; adb devices'
+alias takepix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
 # shellcheck disable=SC2139
 alias d="$CREDENCEID/dn.sh"
 # shellcheck disable=SC2139
@@ -903,8 +908,9 @@ alias fr='fastboot -i 0x525 reboot'
 alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
 # ---- one-offs useful for a short time ----
+# shellcheck disable=SC2034
 __LATEST_SDK__="/Users/michael/Box Sync/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
-alias sdk="pd \"${__LATEST_SDK__/}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
+alias sdk="pd \"\${__LATEST_SDK__/}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
