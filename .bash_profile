@@ -78,7 +78,7 @@ fi
 # script's behavior.
 # -----------------------------------------------------------------------------
 if [[ ! $TEST_YOKE ]] ; then				# we being invoked from outside?
-	DEBUG='YES' # 'YES'						# default: no debugging output
+	DEBUG='' # 'YES'						# default: no debugging output
 	RUN_TESTS='' # 'YES'					# default: production, not QA tests
 	declare -g SILENT='YES' # ''			# default: silent running
 #else
@@ -185,7 +185,6 @@ cleanPath() {
 	  unset oldPath newPath x				# clean up after ourselves
 	fi
 }
-
 
 # -----------------------------------------------------------------------------
 # if $debug show calling function and error message
@@ -882,6 +881,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 CREDENCEID="$HOME/Documents/cid"
 # shellcheck disable=SC2139
 alias cid="cd $CREDENCEID/devops/2r-trident/nix"
+alias cqa="cd $CREDENCEID/qa"
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
 export ADB_TRACE=0
@@ -889,14 +889,13 @@ alias ab='adb reboot-bootloader'
 alias ac='adb logcat | grep com.credenceid'
 alias ad='adb devices'
 alias ak='adb kill-server ; adb start-server'
-#alias al="adb shell 'echo mylockname >/sys/power/wake_lock'"
-#alias au="adb shell 'echo mylockname >/sys/power/wake_unlock'"
+alias al='adb shell pm list packages -f'
 #alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
 alias ap='adb push'
 alias ar='adb reboot'
 alias as='adb shell'
 alias aw='adb wait-for-device ; adb devices'
-alias takepix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
+alias adbpix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
 # shellcheck disable=SC2139
 alias d="$CREDENCEID/dn.sh"
 # shellcheck disable=SC2139
@@ -913,6 +912,7 @@ __LATEST_SDK__="/Users/michael/Box Sync/official__releases__public/__LATEST_SDK_
 alias sdk="pd \"\${__LATEST_SDK__/}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
+
 alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
 
 # -----------------------------------------------------------------------------
