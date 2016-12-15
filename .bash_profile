@@ -739,6 +739,7 @@ alias psall='ps -afx'
 alias pstop='ps -creo command,pid,%cpu | head -10'
 #alias python="python3"						# p3 libs incompat with p2
 alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
+alias shellcheck='shellcheck -x'			# follow paths to other scripts
 alias sink='sync;sync;sync'					# write filesystem changes
 alias sp='source ~/.bash_profile'
 alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
@@ -880,16 +881,16 @@ export JAVA_HOME						# SC2155: Declare and assign separately
 JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 CREDENCEID="$HOME/Documents/cid"
 # shellcheck disable=SC2139
-alias cid="cd $CREDENCEID/devops/2r-trident/nix"
-alias cqa="cd $CREDENCEID/qa"
+alias cid="cd \$CREDENCEID/devops/2r-trident/nix"
+alias cqa="cd \$CREDENCEID/qa"
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
-export ADB_TRACE=0
+export ADB_TRACE=''						# or ='all'
 alias ab='adb reboot-bootloader'
-alias ac='adb logcat | grep com.credenceid'
+alias ac="adb logcat | grep com.credenceid | cut -d ' ' -f 8-999"
 alias ad='adb devices'
 alias ak='adb kill-server ; adb start-server'
-alias al='adb shell pm list packages -f'
+alias al='adb shell pm list packages -f | grep rede'
 #alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
 alias ap='adb push'
 alias ar='adb reboot'
@@ -907,9 +908,15 @@ alias fr='fastboot -i 0x525 reboot'
 alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
 # ---- one-offs useful for a short time ----
+__DIST_DIR__='/Users/michael/Box Sync'
 # shellcheck disable=SC2034
-__LATEST_SDK__="/Users/michael/Box Sync/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
-alias sdk="pd \"\${__LATEST_SDK__/}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
+__CANDIDAT__="$__DIST_DIR__/official__candidates__private/1.12.12"
+__RELEASED__="$__DIST_DIR__/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
+# shellcheck disable=SC2034
+__LATEST_SDK__="$__RELEASED__"
+alias released="__LATEST_SDK__=\"\$__RELEASED__\""
+alias candidate="__LATEST_SDK__=\"\$__CANDIDAT__\""
+alias sdk="pd \"\${__LATEST_SDK__}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 
