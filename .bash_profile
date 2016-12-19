@@ -638,7 +638,7 @@ doHostThings() {
 # use powerline and gitstatus-powerline for prompts & status lines (or go
 # old-school on systems without it installed)
 #
-# FYI: configs in /Users/michael/.config/powerline/themes/shell/
+# FYI: configs in ${HOME}/.config/powerline/themes/shell/
 # -----------------------------------------------------------------------------
 POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
 if [[ "$POWERLINE_PATH" != "" ]]; then
@@ -724,6 +724,9 @@ alias .6='cd ../../../../../../'            # Go back 6 directory levels
 #     --unchanged-group-format=$'\e[0;32m%=\e[0m'"
      
 #alias cpbash='scp ~/.bash_profile USERNAME_OVER_THERE@hostname:'
+alias ccze='ccze -A -o nolookups'			# log colorize more quickly
+alias dirs='dirs -v'						# show dir stack vertically
+alias df='df -h'							# show human-readable sizes
 alias e="exit"								# end this shell
 alias grepc='grep --color=auto'				# grep shows matched in color
 alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
@@ -739,7 +742,7 @@ alias psall='ps -afx'
 alias pstop='ps -creo command,pid,%cpu | head -10'
 #alias python="python3"						# p3 libs incompat with p2
 alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
-alias shellcheck='shellcheck -x'			# follow paths to other scripts
+alias sc='shellcheck -x'					# follow paths to other scripts
 alias sink='sync;sync;sync'					# write filesystem changes
 alias sp='source ~/.bash_profile'
 alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
@@ -824,8 +827,8 @@ httpdebug () { /usr/bin/curl "$@" -o /dev/null -w "dns: %{time_namelookup} conne
 # -----------------------------------------------------------------------------
 # seriously miscellaneous stuff that was necessary at some time :-)
 # -----------------------------------------------------------------------------
-alias synctarot='rsync -avz "/Users/michael/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
-alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM /Users/michael/Pictures/family/iph'
+alias synctarot='rsync -avz "${HOME}/Documents/Burning Man/2015/tarot/" "/Volumes/LaCie 500GB/tarot-backups"'
+alias syncpix='rsync -azP root@192.168.1.195:/var/mobile/Media/DCIM ${HOME}/Pictures/family/iph'
 
 # -----------------------------------------------------------------------------
 # cd to frontmost macOS Finder window
@@ -874,12 +877,13 @@ extract () {
 # -----------------------------------------------------------------------------
 # Credence ID
 # -----------------------------------------------------------------------------
-# shellcheck source="/Users/michael/"
+# shellcheck source="${HOME}/"
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 export JAVA_HOME						# SC2155: Declare and assign separately
 JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 CREDENCEID="$HOME/Documents/cid"
+alias capps="cd \$CREDENCEID/cid/code/CredenceIDApps"
 # shellcheck disable=SC2139
 alias cid="cd \$CREDENCEID/devops/2r-trident/nix"
 alias cqa="cd \$CREDENCEID/qa"
@@ -890,13 +894,12 @@ alias ab='adb reboot-bootloader'
 alias ac="adb logcat | grep com.credenceid | cut -d ' ' -f 8-999"
 alias ad='adb devices'
 alias ak='adb kill-server ; adb start-server'
-alias al='adb shell pm list packages -f | grep rede'
+alias al='adb shell pm list packages -f | grep credenceid'
 #alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
 alias ap='adb push'
 alias ar='adb reboot'
 alias as='adb shell'
 alias aw='adb wait-for-device ; adb devices'
-alias adbpix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
 # shellcheck disable=SC2139
 alias d="$CREDENCEID/dn.sh"
 # shellcheck disable=SC2139
@@ -905,22 +908,28 @@ alias fb='fastboot -i 0x525'
 alias fc='fastboot -i 0x525 continue'
 alias fd='fastboot -i 0x525 devices'
 alias fr='fastboot -i 0x525 reboot'
+alias getpix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
 alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
+
 # ---- one-offs useful for a short time ----
-__DIST_DIR__='/Users/michael/Box Sync'
+__DIST_DIR__="${HOME}/Box Sync"
 # shellcheck disable=SC2034
-__CANDIDAT__="$__DIST_DIR__/official__candidates__private/1.12.12"
-__RELEASED__="$__DIST_DIR__/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
+__CANDIDAT__="${__DIST_DIR__}/official__candidates__private/1.12.12"
+__RELEASED__="${__DIST_DIR__}/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
 # shellcheck disable=SC2034
-__LATEST_SDK__="$__RELEASED__"
-alias released="__LATEST_SDK__=\"\$__RELEASED__\""
-alias candidate="__LATEST_SDK__=\"\$__CANDIDAT__\""
-alias sdk="pd \"\${__LATEST_SDK__}\" ; adb \$FB_TARGET install -r CredenceIDStressTest.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; popd"
+__MARK__="${__DIST_DIR__}/staff_drop_boxes/mark.evans"
+# shellcheck disable=SC2034
+__LATEST_SDK__="${__RELEASED__}"
+alias released="__LATEST_SDK__=\"\${__RELEASED__}\""
+alias candidate="__LATEST_SDK__=\"\${__CANDIDAT__}\""
+alias mark="__LATEST_SDK__=\"\${__MARK__}\""
+#alias sdk="pd \"\${__LATEST_SDK__}\" ; adb \$FB_TARGET install -r Credence*Stress*Test*.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; adb \$FB_TARGET install -r CredenceDemo-COV2.apk ; popd"
+alias sdk="pd \"\${__LATEST_SDK__}\" ; for a in Credence\*Stress\*Test\*.apk CredenceSdkApp\*.apk CredenceService\*.apk CredenceDemo-COV2.apk ; do adb \$FB_TARGET install -r \$a ; done"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 
-alias doall="pushd /Users/michael/Documents/cid/devops/2r-trident/nix ; grc /Users/michael/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
+alias doall="pushd \${HOME}/Documents/cid/devops/2r-trident/nix ; grc \${HOME}/Documents/cid/devops/bin/all-adb.sh minimal-adb.sh ; popd"
 
 # -----------------------------------------------------------------------------
 # wrapper is ~/bin/serial
