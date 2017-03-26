@@ -1,5 +1,6 @@
 source /Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/vim/plugin/powerline.vim
 "
+let g:netrw_dirhistmax=0		" don't want .netrwhist history file
 set printoptions=header:0		" don't print page headers0
 set guifont=Inconsolata\ for\ Powerline:h15
 let g:Powerline_symbols = 'fancy'
