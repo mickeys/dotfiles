@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# -----------------------------------------------------------------------------
+# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.1
+#
+# Work-related workflow shortcuts. To install
+#
+# (1) download this file (.bash_credenceid) to your home directory
+# (2) add the following line into your .bash_profile:
+#
+#	source ~/.bash_credenceid
+#
+# Available to *NIX users (including macOS) and Windows (via Bash for Windows):
+#
+#	https://msdn.microsoft.com/en-us/commandline/wsl/about
+#
+# Syntax-checked with shellcheck (shellcheck.net).
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Android Debug Bridge (adb)
+#
+# As we do a lot of work with Android devices, much of our command-line time is
+# spent with adb, which you're able to download from:
+#
+#	https://developer.android.com/studio/command-line/adb.html
+#
+# To start with adb, populate your ~/.android/adb_usb.ini find instructions at:
+#
+#	https://github.com/apkudo/adbusbini
+#
+# -----------------------------------------------------------------------------
+# shellcheck disable=SC2128
+export ADB_TRACE=''						# or ='all' - 
+alias aawake='adb shell svc power stayon true'
+alias aasleep='adb shell svc power stayon false'
+alias ab='adb reboot-bootloader'
+alias ac="adb logcat | grep com.credenceid | cut -d ' ' -f 8-999"
+alias ad='adb devices'
+alias adn='adb shell reboot -p'
+alias ai='adb install -r'
+alias ak='adb kill-server ; adb start-server'
+alias al='adb shell pm list packages -f | grep credenceid'
+#alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
+alias am='adb shell mount system'
+alias ap='adb push'
+alias ar='adb reboot'
+alias arr='adb reboot recovery'
+alias as='adb shell'
+alias au='adb uninstall'
+alias alli='ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-Service.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-SdkApp.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-StressApi.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-Demo.apk'
+alias allu='au com.credenceid.credenceidstresstest ; au com.credenceid.sdkapp ; au com.credenceid.service ; au com.credenceid.demo'
+alias aw='adb wait-for-device ; adb devices'
+# shellcheck disable=SC2139
+alias d="$CREDENCEID/dn.sh"
+alias dt='adb shell "mkdir -p /sdcard/credenceid ; echo trident-2 >> /sdcard/credenceid/device-type"'
+# shellcheck disable=SC2139
+alias e="$CREDENCEID/emmc_upgrade.sh"
+alias fb='fastboot -i 0x525'
+alias fc='fastboot -i 0x525 continue'
+alias fd='fastboot -i 0x525 devices'
+alias fr='fastboot -i 0x525 reboot'
+alias getkenny='scp build:/home/kcrudup/src/t2r-test-repo/out/target/product/trident_2r/*.{img,zip} .'
+# shellcheck disable=SC2034
+_PD="/sdcard"
+# shellcheck disable=SC2034
+_PF="screen.png"
+alias getpix="adb shell mkdir -p \$_PD ; adb shell screencap \$_PD/\$_PF ; adb pull \$_PD/\$_PF ; adb shell rm \$_PD/\$_PF ; mv \$_PF \`date +%Y%m%d_%H%M%S\`.png" # _\$2
+#alias foo="x=\"$2\" ; echo \"$x thing_\${x}.png\""
+alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
+alias x='c ; grc upgrade_boards-adb.sh'
