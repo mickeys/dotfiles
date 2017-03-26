@@ -23,3 +23,15 @@ MOVE ME BACK TO THUMB DRIVE
 .gradle
 .lesshst
 .wget-hsts
+.bash_sessions
+.bundle
+.gemrc
+.scep/gui.cfg
+.cups/lpoptions
+.emulator_console_auth_token
+.Trash
+migration/
+bin/
+*.old
+*.bak
+*.rnd

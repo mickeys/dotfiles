@@ -469,8 +469,8 @@ doOsSpecifics() {
 			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
 			alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
 			alias ll='ls -FGlAhp'						# ls w kb, mb, gb
-> 			alias ls='ls -F --time-style=iso'			# ls special chars'
-			alias lock="open '/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'"
+ 			alias ls='ls -F --time-style=iso'			# ls special chars
+			alias lock='open /System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'
 			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
 			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
 			alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
@@ -745,7 +745,6 @@ alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
 alias sc='shellcheck -x'					# follow paths to other scripts
 alias sink='sync;sync;sync'					# write filesystem changes
 alias sp='source ~/.bash_profile'
-alias ta='tail /usr/local/var/log/apache2/error_log'	# apache error log
 alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
 alias vi='vim'								# colored vi editor
 alias which='type -all'                     # find executables
@@ -791,6 +790,11 @@ alias gsp='git stash pop'					# git-stash(1)
 alias gss='git stash save'					# git-stash(1)
 
 # -----------------------------------------------------------------------------
+# WordPress local hosting development
+# -----------------------------------------------------------------------------
+alias cdwp='cd /Library/WebServer/Documents/s/wp-content/themes/m_and_c/'
+
+# -----------------------------------------------------------------------------
 # Exiftool: rename image files by embedded EXIF data. Can operate in existing
 # directory (in-line) or move recursively into a dated directory hierarchy.
 #
@@ -817,11 +821,15 @@ alias eee="pushd ~/Pictures/family/ ; er $GRAPHICS ; md5.bash $GRAPHICS ; mvmd5"
 # -----------------------------------------------------------------------------
 # web development
 # -----------------------------------------------------------------------------
+alias acheck='ps aux | grep httpd'
+alias arestart='sudo apachectl restart'
+alias astart='sudo apachectl start'
+alias astop='sudo apachectl stop'
+alias atest='apachectl configtest'
+#
 alias aedit='sudo edit /etc/httpd/httpd.conf'	# edit Apache httpd.conf
 alias alogs="less +F /var/log/apache2/error_log" # show apache error logs
-alias arestart='sudo apachectl graceful'	# restart Apache
 alias hostfile='sudo edit /etc/hosts'		# edit /etc/hosts file
-alias hlogs='tail /var/log/httpd/error_log'	# tail HTTP error logs
 httpdebug () { /usr/bin/curl "$@" -o /dev/null -w "dns: %{time_namelookup} connect: %{time_connect} pretransfer: %{time_pretransfer} starttransfer: %{time_starttransfer} total: %{time_total}\n" ; }
 
 # -----------------------------------------------------------------------------
@@ -849,6 +857,8 @@ EOT
 	cd "$currFolderPath" || exit
 }
 
+function tit { echo -ne "\033]0;${*}\007" ; }	# iTerm set title bar
+
 # -----------------------------------------------------------------------------
 # extract best-known archives with one command
 # -----------------------------------------------------------------------------
@@ -874,41 +884,76 @@ extract () {
 }
 
 #TO-DO: put the following in a doHome() doWork() doElsewhere()
+
+
+# -----------------------------------------------------------------------------
+# WordPress
+# -----------------------------------------------------------------------------
+# 'localhost' doesn't work because sockets
+alias mys='mysql --host=127.0.0.1 --port=65001 -u root -p --execute="show databases;"'
+
 # -----------------------------------------------------------------------------
 # Credence ID
 # -----------------------------------------------------------------------------
+# shellcheck source=/Users/michael/.bash_credenceid
+source ~/.bash_credenceid
+
+alias wbackup='wget --user brittonholland --password Credence#1 -r ftp://ftp.credenceid.com/'
+alias fw='ftp ftp://brittonholland:Credence#1@ftp.credenceid.com'
+
 # shellcheck source="${HOME}/"
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 export JAVA_HOME						# SC2155: Declare and assign separately
 JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+
+# --- CID working directories ---
 CREDENCEID="$HOME/Documents/cid"
-alias capps="cd \$CREDENCEID/cid/code/CredenceIDApps"
+alias capps="cd \$CREDENCEID/code/CredenceIDApps"
 # shellcheck disable=SC2139
-alias cid="cd \$CREDENCEID/devops/2r-trident/nix"
-alias cqa="cd \$CREDENCEID/qa"
+alias cdd="cd \$CREDENCEID/devops"
+alias cdtw="cd \$CREDENCEID/devops/twizzler"
+alias cdt2r="cd \$CREDENCEID/devops/2r-trident/nix"
+alias cdqa="cd \$CREDENCEID/qa"
+
 # --- workflow shortcuts ---
 # shellcheck disable=SC2128
 export ADB_TRACE=''						# or ='all'
+alias aawake='adb shell svc power stayon true'
+alias aasleep='adb shell svc power stayon false'
 alias ab='adb reboot-bootloader'
 alias ac="adb logcat | grep com.credenceid | cut -d ' ' -f 8-999"
 alias ad='adb devices'
+alias adn='adb shell reboot -p'
+alias ai='adb install -r'
 alias ak='adb kill-server ; adb start-server'
 alias al='adb shell pm list packages -f | grep credenceid'
 #alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
+alias am='adb shell mount system'
 alias ap='adb push'
 alias ar='adb reboot'
+alias arr='adb reboot recovery'
 alias as='adb shell'
+alias au='adb uninstall'
+alias alli='ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-Service.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-SdkApp.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-StressApi.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-Demo.apk'
+alias allu='au com.credenceid.credenceidstresstest ; au com.credenceid.sdkapp ; au com.credenceid.service ; au com.credenceid.demo'
 alias aw='adb wait-for-device ; adb devices'
 # shellcheck disable=SC2139
 alias d="$CREDENCEID/dn.sh"
+alias dt='adb shell "mkdir -p /sdcard/credenceid ; echo trident-2 >> /sdcard/credenceid/device-type"'
 # shellcheck disable=SC2139
 alias e="$CREDENCEID/emmc_upgrade.sh"
 alias fb='fastboot -i 0x525'
 alias fc='fastboot -i 0x525 continue'
 alias fd='fastboot -i 0x525 devices'
 alias fr='fastboot -i 0x525 reboot'
-alias getpix="sleep 7; adb shell screencap /sdcard/screen.png ; adb pull /sdcard/screen.png ; mv ./screen.png \`date +%Y%m%d_%H%M%S\`_screengrab.png"
+alias getkenny='scp build:/home/kcrudup/src/t2r-test-repo/out/target/product/trident_2r/*.{img,zip} .'
+# shellcheck disable=SC2034
+_PD="/sdcard"
+# shellcheck disable=SC2034
+_PF="screen.png"
+alias getpix="adb shell mkdir -p \$_PD ; adb shell screencap \$_PD/\$_PF ; adb pull \$_PD/\$_PF ; adb shell rm \$_PD/\$_PF ; mv \$_PF \`date +%Y%m%d_%H%M%S\`.png" # _\$2
+#alias foo="x=\"$2\" ; echo \"$x thing_\${x}.png\""
 alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
 alias x='c ; grc upgrade_boards-adb.sh'
 
@@ -916,7 +961,7 @@ alias x='c ; grc upgrade_boards-adb.sh'
 __DIST_DIR__="${HOME}/Box Sync"
 # shellcheck disable=SC2034
 __CANDIDAT__="${__DIST_DIR__}/official__candidates__private/1.12.12"
-__RELEASED__="${__DIST_DIR__}/official__releases__public/__LATEST_SDK__/20161012__1.12.00"
+__RELEASED__="${__DIST_DIR__}/official__releases__public/__LATEST_SDK__/1.15.00"
 # shellcheck disable=SC2034
 __MARK__="${__DIST_DIR__}/staff_drop_boxes/mark.evans"
 # shellcheck disable=SC2034
@@ -925,7 +970,10 @@ alias released="__LATEST_SDK__=\"\${__RELEASED__}\""
 alias candidate="__LATEST_SDK__=\"\${__CANDIDAT__}\""
 alias mark="__LATEST_SDK__=\"\${__MARK__}\""
 #alias sdk="pd \"\${__LATEST_SDK__}\" ; adb \$FB_TARGET install -r Credence*Stress*Test*.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; adb \$FB_TARGET install -r CredenceDemo-COV2.apk ; popd"
-alias sdk="pd \"\${__LATEST_SDK__}\" ; for a in Credence\*Stress\*Test\*.apk CredenceSdkApp\*.apk CredenceService\*.apk CredenceDemo-COV2.apk ; do adb \$FB_TARGET install -r \$a ; done"
+alias sdk="pd \"\${__LATEST_SDK__}\" ; for a in C-Demo.apk C-SdkApp.apk C-Service.apk C-StressApi.apk ; do adb \$ADB_TARGET install -r \$a ; done"
+#alias usdk="pd \"\${__LATEST_SDK__}\" ; for r in \$( al | cut -d '=' -f 2 | tr -d '\r' ) ; do echo adb uninstall $r ; adb uninstall $r ; done ; popd"
+#alias usdk="pd \"\${__LATEST_SDK__}\" ; for r in \$( al | cut -d '=' -f 2 | tr -d '\r' ) ; do echo adb uninstall \"$r\" ; done ; popd"
+alias usdk="a=\"\$( al | cut -d '=' -f 2 | tr -d '\r' )\" ; echo \$a"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
 
@@ -966,6 +1014,8 @@ fi
 # -----------------------------------------------------------------------------
 # Manage $PATH and $MANPATH.
 # -----------------------------------------------------------------------------
+PATH="$(brew --prefix homebrew/php/php70)/bin:$PATH" # PHP 7.x
+PATH=$PATH:/usr/local/mysql/bin				# MySQL
 MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$MANPATH"	# GNU
 PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"		# GNU
 #PATH=/opt/ImageMagick:$PATH				# ImageMagick
