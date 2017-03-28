@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.1
+# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.2
 #
 # # ---------------------------------------------------------------------------
 # # For *NIX (including macOS) and Windows (via Bash for Windows):
@@ -160,5 +160,38 @@ alias alli='for a in C-Service.apk C-SdkApp.apk ; do ai "$_D/$_V/apk/$a" ; \
 # uninstall the entire CID suite
 alias allu='for a in stressapi sdkapp service demo ; \
 	do printf "Uninstalling $a..." ; au com.credenceid.$a ; done'
+
+# -----------------------------------------------------------------------------
+# git
+# ===
+#
+# “Do not meddle in the affairs of wizards, for they are subtle and quick to
+# anger.” -― J.R.R. Tolkien, The Fellowship of the Ring
+#
+# git, our chosen version control system, is powerful, subtle, and (thankfully)
+# not quick to anger. You may never need git in your time here, but when the day
+# comes that you want to contribute to our code or our documentation, git is the
+# way.
+#
+# git basics: git (https://git-scm.com/)
+#
+# see also: http://nuclearsquid.com/writings/git-tricks-tips-workflows/
+# and also: http://durdn.com/blog/2012/11/22/must-have-git-aliases-advanced-examples/
+# -----------------------------------------------------------------------------
+alias g='git'								# save 66% of typing
+complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
+function ga() { git add "$1"\ ; }			# add files to be tracked
+function gc() { git commit -m "$@" ; }		# commit changes locally
+
+alias gd='git diff'							# see what happened
+alias gi='git check-ignore -v *'			# see what's being ignored
+#alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
+alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
+alias gs='git status --short'				# see what's going on
+alias gp='git push -u origin master'		# send changes upstream
+
+alias gsl='git stash list'					# git-stash(1)
+alias gsp='git stash pop'					# git-stash(1)
+alias gss='git stash save'					# git-stash(1)
 
 # --- end of .bash_credenceid ---
