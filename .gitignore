@@ -36,3 +36,5 @@ bin/
 *.bak
 *.rnd
 .android/
+.atom
+.gnupg
