@@ -896,7 +896,12 @@ alias mys='mysql --host=127.0.0.1 --port=65001 -u root -p --execute="show databa
 # Credence ID
 # -----------------------------------------------------------------------------
 # shellcheck source=/Users/michael/.bash_credenceid
-source ~/.bash_credenceid
+source ~/.bash_credenceid				# use a common .bashrc file
+
+alias getkenny='scp build:/home/kcrudup/src/t2r-test-repo/out/target/product/trident_2r/*.{img,zip} .'
+#alias foo="x=\"$2\" ; echo \"$x thing_\${x}.png\""
+alias uu="fastboot \$TARGET oem unlock B73AC261"
+#alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
 
 alias wbackup='wget --user brittonholland --password Credence#1 -r ftp://ftp.credenceid.com/'
 alias fw='ftp ftp://brittonholland:Credence#1@ftp.credenceid.com'
@@ -907,55 +912,16 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 export JAVA_HOME						# SC2155: Declare and assign separately
 JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 
-# --- CID working directories ---
+# --- my shortcuts to CID working directories ---
 CREDENCEID="$HOME/Documents/cid"
-alias capps="cd \$CREDENCEID/code/CredenceIDApps"
+alias cdapps="cd \$CREDENCEID/code/CredenceIDApps"
 # shellcheck disable=SC2139
+alias cdcid="cd \$CREDENCEID/"
 alias cdd="cd \$CREDENCEID/devops"
 alias cdtw="cd \$CREDENCEID/devops/twizzler"
 alias cdt2r="cd \$CREDENCEID/devops/2r-trident/nix"
 alias cdqa="cd \$CREDENCEID/qa"
 
-# --- workflow shortcuts ---
-# shellcheck disable=SC2128
-export ADB_TRACE=''						# or ='all'
-alias aawake='adb shell svc power stayon true'
-alias aasleep='adb shell svc power stayon false'
-alias ab='adb reboot-bootloader'
-alias ac="adb logcat | grep com.credenceid | cut -d ' ' -f 8-999"
-alias ad='adb devices'
-alias adn='adb shell reboot -p'
-alias ai='adb install -r'
-alias ak='adb kill-server ; adb start-server'
-alias al='adb shell pm list packages -f | grep credenceid'
-#alias ap='adb shell cat /mnt/sdcard/ektp/config.properties'
-alias am='adb shell mount system'
-alias ap='adb push'
-alias ar='adb reboot'
-alias arr='adb reboot recovery'
-alias as='adb shell'
-alias au='adb uninstall'
-alias alli='ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-Service.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/20170324-sdk-1-16-16/apk/C-SdkApp.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-StressApi.apk ; ai /Users/michael/Box\ Sync/release_candidates__PRIVATE/sdk-and-apps/20170323-sdk-1-16-13-cid-internal-apps/C-Demo.apk'
-alias allu='au com.credenceid.credenceidstresstest ; au com.credenceid.sdkapp ; au com.credenceid.service ; au com.credenceid.demo'
-alias aw='adb wait-for-device ; adb devices'
-# shellcheck disable=SC2139
-alias d="$CREDENCEID/dn.sh"
-alias dt='adb shell "mkdir -p /sdcard/credenceid ; echo trident-2 >> /sdcard/credenceid/device-type"'
-# shellcheck disable=SC2139
-alias e="$CREDENCEID/emmc_upgrade.sh"
-alias fb='fastboot -i 0x525'
-alias fc='fastboot -i 0x525 continue'
-alias fd='fastboot -i 0x525 devices'
-alias fr='fastboot -i 0x525 reboot'
-alias getkenny='scp build:/home/kcrudup/src/t2r-test-repo/out/target/product/trident_2r/*.{img,zip} .'
-# shellcheck disable=SC2034
-_PD="/sdcard"
-# shellcheck disable=SC2034
-_PF="screen.png"
-alias getpix="adb shell mkdir -p \$_PD ; adb shell screencap \$_PD/\$_PF ; adb pull \$_PD/\$_PF ; adb shell rm \$_PD/\$_PF ; mv \$_PF \`date +%Y%m%d_%H%M%S\`.png" # _\$2
-#alias foo="x=\"$2\" ; echo \"$x thing_\${x}.png\""
-alias uu="fastboot -i 0x525 \$TARGET oem unlock B73AC261"
-alias x='c ; grc upgrade_boards-adb.sh'
 
 # ---- one-offs useful for a short time ----
 __DIST_DIR__="${HOME}/Box Sync"
