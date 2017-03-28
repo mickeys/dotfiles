@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.2
+# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.3
+#
+# Thanks to Tanmay Narang.
 #
 # # ---------------------------------------------------------------------------
 # # For *NIX (including macOS) and Windows (via Bash for Windows):
@@ -193,5 +195,12 @@ alias gp='git push -u origin master'		# send changes upstream
 alias gsl='git stash list'					# git-stash(1)
 alias gsp='git stash pop'					# git-stash(1)
 alias gss='git stash save'					# git-stash(1)
+
+# -----------------------------------------------------------------------------
+# Look inside files for some text string, starting in your current directory.
+#
+# Example usage: lookinside grail
+# -----------------------------------------------------------------------------
+lookinside () { find . -exec grep -i "$@" {} -s \; -exec echo {} \; ; }
 
 # --- end of .bash_credenceid ---
