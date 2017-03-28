@@ -209,14 +209,25 @@ lookinside () { find . -exec grep -i "$@" {} -s \; -exec echo {} \; ; }
 #	% - for unrooted users
 #	# - for rooted users (appears in red)
 #
-# Feel free to customize the prompt in __PS1 to your liking.
+# Feel free to customize the prompt in __PS1 to your liking. An exhaustive list
+# of Bash prompt special characters may be found at:
+#
+#	https://linuxconfig.org/bash-prompt-basics
 # -----------------------------------------------------------------------------
-COLOR="\[$(tput bold)$(tput setaf 4)\]"		# set number to your chosen color
-RED="\[$(tput setaf 1)\]"					# root prompt (#) is in red
-RESET="\[$(tput sgr0)\]"					# continue with all colors reset
+BLACK="\[$(tput setaf 0)\]"					# the palette of tput color choices
+RED="\[$(tput setaf 1)\]"
+GREEN="\[$(tput setaf 2)\]"
+YELLOW="\[$(tput setaf 3)\]"
+BLUE="\[$(tput setaf 4)\]"
+MAGENTA="\[$(tput setaf 5)\]"
+CYAN="\[$(tput setaf 6)\]"
+WHITE="\[$(tput setaf 7)\]"
+
+BOLD="\[$(tput bold)\]"						# bold the following
+RESET="\[$(tput sgr0)\]"					# reset colors & characteristics
 
 __ROOT="${RED}#${RESET}"					# root prompt (#) is red
-__PS1="${COLOR}\h${RESET}"					# common prompt portion
+__PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h${RESET}"	# prompt part
 
 if [ "$(id -u)" -eq 0 ];					# if we're the superuser (root)
 then
