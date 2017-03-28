@@ -38,3 +38,4 @@ bin/
 .android/
 .atom
 .gnupg
+.git.txt
