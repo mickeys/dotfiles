@@ -17,6 +17,11 @@
 #	source ~/.bash_credenceid
 #
 # Syntax-checked with shellcheck (http://www.shellcheck.net/).
+#
+# -----------------------------------------------------------------------------
+# To get the latest version of this file:
+#
+#	curl -#O https://github.com/mickeys/dotfiles/blob/master/.bash_credenceid
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
