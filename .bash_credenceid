@@ -203,4 +203,26 @@ alias gss='git stash save'					# git-stash(1)
 # -----------------------------------------------------------------------------
 lookinside () { find . -exec grep -i "$@" {} -s \; -exec echo {} \; ; }
 
+# -----------------------------------------------------------------------------
+# Change the last character of the terminal prompt to be
+#
+#	% - for unrooted users
+#	# - for rooted users (appears in red)
+#
+# Feel free to customize the prompt in __PS1 to your liking.
+# -----------------------------------------------------------------------------
+COLOR="\[$(tput bold)$(tput setaf 4)\]"		# set number to your chosen color
+RED="\[$(tput setaf 1)\]"					# root prompt (#) is in red
+RESET="\[$(tput sgr0)\]"					# continue with all colors reset
+
+__ROOT="${RED}#${RESET}"					# root prompt (#) is red
+__PS1="${COLOR}\h${RESET}"					# common prompt portion
+
+if [ "$(id -u)" -eq 0 ];					# if we're the superuser (root)
+then
+    PS1="$__PS1 $__ROOT "					# use this prompt variation
+else
+    PS1="$__PS1 % "							# non-root users get this prompt
+fi
+
 # --- end of .bash_credenceid ---
