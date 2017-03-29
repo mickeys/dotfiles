@@ -153,15 +153,12 @@ alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
 # Change _D if you have a non-standard Box.com location on your hard drive.
 # Change _V to point at the SDK (and apps) version you want to be installing.
 # -----------------------------------------------------------------------------
-_D="$HOME/Box Sync/release_candidates__PRIVATE/sdk-and-apps"
-_V="20170324-sdk-1-16-16"
-alias alli='for a in C-Service.apk C-SdkApp.apk ; do ai "$_D/$_V/apk/$a" ; \
-	done ; for a in C-StressApi.apk C-Demo.apk ; \
-	do ai "$_D/$_V-cid-internal-apps/$a" ; done'
+export _D="$HOME/Box Sync/release_candidates__PRIVATE/sdk-and-apps"
+export _V="20170324-sdk-1-16-16"
+alias alli='for a in C-Service.apk C-SdkApp.apk ; do ai "$_D/$_V/apk/$a" ; done ; for a in C-StressApi.apk C-Demo.apk ; do ai "$_D/$_V-cid-internal-apps/$a" ; done'
 
 # uninstall the entire CID suite
-alias allu='for a in stressapi sdkapp service demo ; \
-	do printf "Uninstalling $a..." ; au com.credenceid.$a ; done'
+alias allu='for a in stressapi sdkapp service demo ; do printf "Uninstalling $a..." ; au com.credenceid.$a ; done'
 
 # -----------------------------------------------------------------------------
 # git
@@ -197,6 +194,29 @@ alias gsp='git stash pop'					# git-stash(1)
 alias gss='git stash save'					# git-stash(1)
 
 # -----------------------------------------------------------------------------
+# device-type files
+#
+# Populate device-type files without needing to memorize the exact text string.
+# -----------------------------------------------------------------------------
+alias dttw='adb shell echo twizzler > /sdcard/credenceid/device-type'
+alias dtt3='adb shell echo trident-3 > /sdcard/credenceid/device-type'
+alias dtt2r='adb shell echo Trident-2R > /sdcard/credenceid/device-type'
+alias dtt2='adb shell echo trident-2 > /sdcard/credenceid/device-type'
+alias dtt1='adb shell echo trident-1 > /sdcard/credenceid/device-type'
+alias dtsl='adb shell echo starlight > /sdcard/credenceid/device-type'
+alias dtc3='adb shell echo credenceone-v3 > /sdcard/credenceid/device-type'
+alias dtc2='adb shell echo credenceone-v2 > /sdcard/credenceid/device-type'
+alias dtc1='adb shell echo credenceone-v1 > /sdcard/credenceid/device-type'
+alias dtce='adb shell echo credenceone-ektp > /sdcard/credenceid/device-type'
+
+# -----------------------------------------------------------------------------
+# Populate device-type files by supplying the exact text string.
+#
+# Usage: dt <type> (where type can be seen in the previous section.
+# -----------------------------------------------------------------------------
+function dt { adb shell "mkdir -p /sdcard/credenceid/ ; echo $1 > /sdcard/credenceid/device-type" ; }
+
+# -----------------------------------------------------------------------------
 # Look inside files for some text string, starting in your current directory.
 #
 # Example usage: lookinside grail
@@ -214,6 +234,9 @@ lookinside () { find . -exec grep -i "$@" {} -s \; -exec echo {} \; ; }
 #
 #	https://linuxconfig.org/bash-prompt-basics
 # -----------------------------------------------------------------------------
+export BLACK ; export RED ; export GREEN ; export YELLOW ; export BLUE
+export MAGENTA ; export CYAN ; export WHITE ; export BOLD ; export RESET
+
 BLACK="\[$(tput setaf 0)\]"					# the palette of tput color choices
 RED="\[$(tput setaf 1)\]"
 GREEN="\[$(tput setaf 2)\]"
