@@ -198,16 +198,17 @@ alias gss='git stash save'					# git-stash(1)
 #
 # Populate device-type files without needing to memorize the exact text string.
 # -----------------------------------------------------------------------------
-alias dttw='adb shell echo twizzler > /sdcard/credenceid/device-type'
-alias dtt3='adb shell echo trident-3 > /sdcard/credenceid/device-type'
-alias dtt2r='adb shell echo Trident-2R > /sdcard/credenceid/device-type'
-alias dtt2='adb shell echo trident-2 > /sdcard/credenceid/device-type'
-alias dtt1='adb shell echo trident-1 > /sdcard/credenceid/device-type'
-alias dtsl='adb shell echo starlight > /sdcard/credenceid/device-type'
-alias dtc3='adb shell echo credenceone-v3 > /sdcard/credenceid/device-type'
-alias dtc2='adb shell echo credenceone-v2 > /sdcard/credenceid/device-type'
 alias dtc1='adb shell echo credenceone-v1 > /sdcard/credenceid/device-type'
+alias dtc2='adb shell echo credenceone-v2 > /sdcard/credenceid/device-type'
+alias dtc3='adb shell echo credenceone-v3 > /sdcard/credenceid/device-type'
 alias dtce='adb shell echo credenceone-ektp > /sdcard/credenceid/device-type'
+alias dtsl='adb shell echo starlight > /sdcard/credenceid/device-type'
+alias dtt1='adb shell echo trident-1 > /sdcard/credenceid/device-type'
+alias dtt2='adb shell echo trident-2 > /sdcard/credenceid/device-type'
+alias dtt2r='adb shell echo Trident-2R > /sdcard/credenceid/device-type'
+alias dtt3='adb shell echo trident-3 > /sdcard/credenceid/device-type'
+alias dttb='adb shell echo credencetab > /sdcard/credenceid/device-type'
+alias dttw='adb shell echo twizzler > /sdcard/credenceid/device-type'
 
 # -----------------------------------------------------------------------------
 # Populate device-type files by supplying the exact text string.
