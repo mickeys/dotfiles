@@ -153,8 +153,10 @@ alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
 # Change _D if you have a non-standard Box.com location on your hard drive.
 # Change _V to point at the SDK (and apps) version you want to be installing.
 # -----------------------------------------------------------------------------
-export _D="$HOME/Box Sync/release_candidates__PRIVATE/sdk-and-apps"
-export _V="20170324-sdk-1-16-16"
+#export _D="$HOME/Box Sync/release_candidates__PRIVATE/sdk-and-apps"	# no '\'
+export _D="$HOME/Box Sync/official__releases__PUBLIC/sdk-and-apps"		# no '\'
+export _V="20170329-sdk-1.17.00"
+
 alias alli='for a in C-Service.apk C-SdkApp.apk ; do ai "$_D/$_V/apk/$a" ; done ; for a in C-StressApi.apk C-Demo.apk ; do ai "$_D/$_V-cid-internal-apps/$a" ; done'
 
 # uninstall the entire CID suite
