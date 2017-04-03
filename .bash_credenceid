@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.3
+# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.4
 #
 # Improvements spurred on by Yash Shah, Tanmay Narang; thanks!.
 #
@@ -200,17 +200,17 @@ alias gss='git stash save'					# git-stash(1)
 #
 # Populate device-type files without needing to memorize the exact text string.
 # -----------------------------------------------------------------------------
-alias dtc1='adb shell echo credenceone-v1 > /sdcard/credenceid/device-type'
-alias dtc2='adb shell echo credenceone-v2 > /sdcard/credenceid/device-type'
-alias dtc3='adb shell echo credenceone-v3 > /sdcard/credenceid/device-type'
-alias dtce='adb shell echo credenceone-ektp > /sdcard/credenceid/device-type'
-alias dtsl='adb shell echo starlight > /sdcard/credenceid/device-type'
-alias dtt1='adb shell echo trident-1 > /sdcard/credenceid/device-type'
-alias dtt2='adb shell echo trident-2 > /sdcard/credenceid/device-type'
-alias dtt2r='adb shell echo Trident-2R > /sdcard/credenceid/device-type'
-alias dtt3='adb shell echo trident-3 > /sdcard/credenceid/device-type'
-alias dttb='adb shell echo credencetab > /sdcard/credenceid/device-type'
-alias dttw='adb shell echo twizzler > /sdcard/credenceid/device-type'
+alias dtc1='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v1 > /sdcard/credenceid/device-type"'
+alias dtc2='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v2 > /sdcard/credenceid/device-type"'
+alias dtc3='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v3 > /sdcard/credenceid/device-type"'
+alias dtce='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-ektp > /sdcard/credenceid/device-type"'
+alias dtsl='adb shell "mkdir -p /sdcard/credenceid/ ; echo starlight > /sdcard/credenceid/device-type"'
+alias dtt1='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-1 > /sdcard/credenceid/device-type"'
+alias dtt2='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-2 > /sdcard/credenceid/device-type"'
+alias dtt2r='adb shell "mkdir -p /sdcard/credenceid/ ; echo Trident-2R > /sdcard/credenceid/device-type"'
+alias dtt3='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-3 > /sdcard/credenceid/device-type"'
+alias dttb='adb shell "mkdir -p /sdcard/credenceid/ ; echo credencetab > /sdcard/credenceid/device-type"'
+alias dttw='adb shell "mkdir -p /sdcard/credenceid/ ; echo twizzler > /sdcard/credenceid/device-type"'
 
 # -----------------------------------------------------------------------------
 # Populate device-type files by supplying the exact text string.
