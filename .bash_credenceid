@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Michael Sattler <Michael.Sattler@CredenceID.com> v 0.0.4
+# Michael Sattler <Michael.Sattler@CredenceID.com>
 #
 # Improvements spurred on by Yash Shah, Tanmay Narang; thanks!.
 #
@@ -147,6 +147,7 @@ alias as='adb shell'					# start a shell session on the device
 alias ak='adb kill-server ; adb start-server'	# stop and start the ADB server
 alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
 alias adate="adb shell date -s `date \"+%Y%m%d.%H%M%S\"`"	# set time on device
+alias adw='adb wait-for-device'			# don't start until any device appears
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
