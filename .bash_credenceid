@@ -146,6 +146,7 @@ alias am='adb shell mount system'		# mount an unrooted devices file system
 alias as='adb shell'					# start a shell session on the device
 alias ak='adb kill-server ; adb start-server'	# stop and start the ADB server
 alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
+alias adate="adb shell date -s `date \"+%Y%m%d.%H%M%S\"`"	# set time on device
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
