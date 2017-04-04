@@ -148,6 +148,7 @@ alias ak='adb kill-server ; adb start-server'	# stop and start the ADB server
 alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
 alias adate="adb shell date -s `date \"+%Y%m%d.%H%M%S\"`"	# set time on device
 alias adw='adb wait-for-device'			# don't start until any device appears
+alias sel='adb shell getenforce'		# SELinux enforced?
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
