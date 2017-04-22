@@ -100,6 +100,7 @@ alias adn='adb shell reboot -p'			# another way to reboot into normal mode
 #
 # Android apps are delivered as APKs. 
 # -----------------------------------------------------------------------------
+alias all='adb shell pm list packages -f | sort'	# sorted list of packages
 alias al='adb shell pm list packages -f | grep credenceid'	# our installed APKs
 
 alias ai='adb install -r'				# install an APK
@@ -142,13 +143,15 @@ alias getpix="adb shell mkdir -p \$_PD ; adb shell screencap \$_PD/\$_PF ; \
 # -----------------------------------------------------------------------------
 # Miscellaneous
 # -----------------------------------------------------------------------------
-alias am='adb shell mount system'		# mount an unrooted devices file system
+alias am='adb shell mount system'		# mount UNROOTED device's file system
 alias as='adb shell'					# start a shell session on the device
 alias ak='adb kill-server ; adb start-server'	# stop and start the ADB server
 alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
-alias adate="adb shell date -s `date \"+%Y%m%d.%H%M%S\"`"	# set time on device
+alias adate="adb shell date -s \`date \"+%Y%m%d.%H%M%S\"\`"	# set time on device
 alias adw='adb wait-for-device'			# don't start until any device appears
 alias sel='adb shell getenforce'		# SELinux enforced?
+alias awipe='adb shell am broadcast -a android.intent.action.MASTER_CLEAR'
+alias tabbatt'cat /sys/class/power_supply/bq27520-battery/device/df_version'
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
@@ -203,16 +206,26 @@ alias gss='git stash save'					# git-stash(1)
 #
 # Populate device-type files without needing to memorize the exact text string.
 # -----------------------------------------------------------------------------
+# credenceone-v1 ~ fingerprint
 alias dtc1='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v1 > /sdcard/credenceid/device-type"'
+# credenceone-v2 ~ fingerprint, card reader
 alias dtc2='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v2 > /sdcard/credenceid/device-type"'
+# credenceone-v3 ~ fingerprint, card reader, mrz
 alias dtc3='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v3 > /sdcard/credenceid/device-type"'
+# credenceone-ektp ~ SAM card
 alias dtce='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-ektp > /sdcard/credenceid/device-type"'
+
+# tablet prototype
 alias dtsl='adb shell "mkdir -p /sdcard/credenceid/ ; echo starlight > /sdcard/credenceid/device-type"'
+# tablet production
+alias dttb='adb shell "mkdir -p /sdcard/credenceid/ ; echo credencetab > /sdcard/credenceid/device-type"'
+
 alias dtt1='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-1 > /sdcard/credenceid/device-type"'
 alias dtt2='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-2 > /sdcard/credenceid/device-type"'
 alias dtt2r='adb shell "mkdir -p /sdcard/credenceid/ ; echo Trident-2R > /sdcard/credenceid/device-type"'
+# no longer used, legacy code (per Mark Evans)
 alias dtt3='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-3 > /sdcard/credenceid/device-type"'
-alias dttb='adb shell "mkdir -p /sdcard/credenceid/ ; echo credencetab > /sdcard/credenceid/device-type"'
+
 alias dttw='adb shell "mkdir -p /sdcard/credenceid/ ; echo twizzler > /sdcard/credenceid/device-type"'
 
 # -----------------------------------------------------------------------------
