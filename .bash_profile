@@ -658,7 +658,7 @@ else
 	setTermPrompt							# use old-school prompt
 fi
 # -----------------------------------------------------------------------------
-# All-*nix do everywhere command aliasing. Works on all bash.
+# All-*NIX do everywhere command aliasing. Works on all bash.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -694,11 +694,11 @@ HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
 shopt -s checkwinsize						# after each command check window size...
 shopt -s histappend							# append, don't overwrite, history file
 
-
 # Avoid duplicates
 export HISTCONTROL=
 # When the shell exits, append to the history file instead of overwriting it
 shopt -s histappend
+
 # -----------------------------------------------------------------------------
 # other environment settings
 # -----------------------------------------------------------------------------
@@ -744,7 +744,7 @@ alias pstop='ps -creo command,pid,%cpu | head -10'
 alias rmempty='find . -name .DS_Store -delete ; find . -type d -empty -delete'
 alias sc='shellcheck -x'					# follow paths to other scripts
 alias sink='sync;sync;sync'					# write filesystem changes
-alias sp='source ~/.bash_profile'
+alias sp='source ~/.bash_profile'			# re-load this file
 alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
 alias vi='vim'								# colored vi editor
 alias which='type -all'                     # find executables
@@ -767,27 +767,6 @@ zipf () { zip -r "$1".zip "$1" ; }          # create zip archive of a folder
 export CLICOLOR=1							# make ls colorful
 export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# was 'Bxgxfxfxcxdxdxhbadbxbx'
 export TERM=xterm-color						# use color-capable termcap
-
-# -----------------------------------------------------------------------------
-# git
-#
-# see also: http://nuclearsquid.com/writings/git-tricks-tips-workflows/
-# http://durdn.com/blog/2012/11/22/must-have-git-aliases-advanced-examples/
-# -----------------------------------------------------------------------------
-alias g='git'								# save 66% of typing
-complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
-function ga() { git add "$1"\ ; }			# add files to be tracked
-function gc() { git commit -m "$@" ; }		# commit changes locally
-
-alias gd='git diff'							# see what happened
-alias gi='git check-ignore -v *'			# see what's being ignored
-#alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
-alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
-alias gs='git status --short'				# see what's going on
-alias gp='git push -u origin master'		# send changes upstream
-alias gsl='git stash list'					# git-stash(1)
-alias gsp='git stash pop'					# git-stash(1)
-alias gss='git stash save'					# git-stash(1)
 
 # -----------------------------------------------------------------------------
 # WordPress local hosting development
@@ -885,7 +864,6 @@ extract () {
 
 #TO-DO: put the following in a doHome() doWork() doElsewhere()
 
-
 # -----------------------------------------------------------------------------
 # WordPress
 # -----------------------------------------------------------------------------
@@ -922,7 +900,6 @@ alias cdtw="cd \$CREDENCEID/devops/twizzler"
 alias cdt2r="cd \$CREDENCEID/devops/2r-trident/nix"
 alias cdqa="cd \$CREDENCEID/qa"
 
-
 # ---- one-offs useful for a short time ----
 __DIST_DIR__="${HOME}/Box Sync"
 # shellcheck disable=SC2034
@@ -935,10 +912,8 @@ __LATEST_SDK__="${__RELEASED__}"
 alias released="__LATEST_SDK__=\"\${__RELEASED__}\""
 alias candidate="__LATEST_SDK__=\"\${__CANDIDAT__}\""
 alias mark="__LATEST_SDK__=\"\${__MARK__}\""
-#alias sdk="pd \"\${__LATEST_SDK__}\" ; adb \$FB_TARGET install -r Credence*Stress*Test*.apk ; adb \$FB_TARGET install -r CredenceSdkApp.apk ;adb \$FB_TARGET install -r CredenceService.apk ; adb \$FB_TARGET install -r CredenceDemo-COV2.apk ; popd"
-alias sdk="pd \"\${__LATEST_SDK__}\" ; for a in C-Demo.apk C-SdkApp.apk C-Service.apk C-StressApi.apk ; do adb \$ADB_TARGET install -r \$a ; done"
-#alias usdk="pd \"\${__LATEST_SDK__}\" ; for r in \$( al | cut -d '=' -f 2 | tr -d '\r' ) ; do echo adb uninstall $r ; adb uninstall $r ; done ; popd"
-#alias usdk="pd \"\${__LATEST_SDK__}\" ; for r in \$( al | cut -d '=' -f 2 | tr -d '\r' ) ; do echo adb uninstall \"$r\" ; done ; popd"
+
+# TO-DO: deal with the newline that screws up the following
 alias usdk="a=\"\$( al | cut -d '=' -f 2 | tr -d '\r' )\" ; echo \$a"
 
 alias obq="pushd ./__SPECIAL_STUFFS__ ; adb shell mkdir /sdcard/ ; adb \$TARGET push TWIZZLER_01_ROM-other.bq.fs /sdcard/ ; adb \$TARGET shell /data/bqtool -d 3 /sdcard/TWIZZLER_01_ROM-other.bq.fs ; popd"
