@@ -102,6 +102,7 @@ alias adn='adb shell reboot -p'			# another way to reboot into normal mode
 # -----------------------------------------------------------------------------
 alias all='adb shell pm list packages -f | sort'	# sorted list of packages
 alias al='adb shell pm list packages -f | grep credenceid'	# our installed APKs
+alias alp='adb shell pm list packages -f | sort'
 
 alias ai='adb install -r'				# install an APK
 alias au='adb uninstall'				# uninstall an APK
@@ -151,7 +152,7 @@ alias adate="adb shell date -s \`date \"+%Y%m%d.%H%M%S\"\`"	# set time on device
 alias adw='adb wait-for-device'			# don't start until any device appears
 alias sel='adb shell getenforce'		# SELinux enforced?
 alias awipe='adb shell am broadcast -a android.intent.action.MASTER_CLEAR'
-alias tabbatt'cat /sys/class/power_supply/bq27520-battery/device/df_version'
+alias tabbatt='adb shell cat /sys/class/power_supply/bq27520-battery/device/df_version'
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
