@@ -108,6 +108,15 @@ alias ai='adb install -r'				# install an APK
 alias au='adb uninstall'				# uninstall an APK
 alias aau='adb shell pm uninstall'		# when `au` just doesn't seem to work
 
+function aii() {						# aii == "adb install items"
+	for apk in "$@"						# usage: aii x.apk {y.apk, ...}
+	do
+		n=$(basename "$apk")			# full just the apk name from path
+		echo "Installing $n..."			# be nice and announce our actions
+		adb install "$apk"				# install the apk
+	done
+}
+
 # -----------------------------------------------------------------------------
 # Set the Android phone 'keep awake while plugged in' setting.
 #
@@ -186,21 +195,21 @@ alias allu='for a in stressapi sdkapp service demo ; do printf "Uninstalling $a.
 # see also: http://nuclearsquid.com/writings/git-tricks-tips-workflows/
 # and also: http://durdn.com/blog/2012/11/22/must-have-git-aliases-advanced-examples/
 # -----------------------------------------------------------------------------
-alias g='git'								# save 66% of typing
+alias g='git'							# save 66% of typing
 complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
-function ga() { git add "$1"\ ; }			# add files to be tracked
-function gc() { git commit -m "$@" ; }		# commit changes locally
+function ga() { git add "$1"\ ; }		# add files to be tracked
+function gc() { git commit -m "$@" ; }	# commit changes locally
 
-alias gd='git diff'							# see what happened
-alias gi='git check-ignore -v *'			# see what's being ignored
+alias gd='git diff'						# see what happened
+alias gi='git check-ignore -v *'		# see what's being ignored
 #alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
 alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
-alias gs='git status --short'				# see what's going on
-alias gp='git push -u origin master'		# send changes upstream
+alias gs='git status --short'			# see what's going on
+alias gp='git push -u origin master'	# send changes upstream
 
-alias gsl='git stash list'					# git-stash(1)
-alias gsp='git stash pop'					# git-stash(1)
-alias gss='git stash save'					# git-stash(1)
+alias gsl='git stash list'				# git-stash(1)
+alias gsp='git stash pop'				# git-stash(1)
+alias gss='git stash save'				# git-stash(1)
 
 # -----------------------------------------------------------------------------
 # device-type files
@@ -269,7 +278,7 @@ lookinside () { find . -exec grep -i "$@" {} -s \; -exec echo {} \; ; }
 export BLACK ; export RED ; export GREEN ; export YELLOW ; export BLUE
 export MAGENTA ; export CYAN ; export WHITE ; export BOLD ; export RESET
 
-BLACK="\[$(tput setaf 0)\]"					# the palette of tput color choices
+BLACK="\[$(tput setaf 0)\]"				# the palette of tput color choices
 RED="\[$(tput setaf 1)\]"
 GREEN="\[$(tput setaf 2)\]"
 YELLOW="\[$(tput setaf 3)\]"
@@ -278,17 +287,21 @@ MAGENTA="\[$(tput setaf 5)\]"
 CYAN="\[$(tput setaf 6)\]"
 WHITE="\[$(tput setaf 7)\]"
 
-BOLD="\[$(tput bold)\]"						# bold the following
-RESET="\[$(tput sgr0)\]"					# reset colors & characteristics
+BOLD="\[$(tput bold)\]"					# bold the following
+RESET="\[$(tput sgr0)\]"				# reset colors & characteristics
 
-__ROOT="${RED}#${RESET}"					# root prompt (#) is red
+__ROOT="${RED}#${RESET}"				# root prompt (#) is red
 __PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h${RESET}"	# prompt part
 
-if [ "$(id -u)" -eq 0 ];					# if we're the superuser (root)
+if [ "$(id -u)" -eq 0 ];				# if we're the superuser (root)
 then
-    PS1="$__PS1 $__ROOT "					# use this prompt variation
+    PS1="$__PS1 $__ROOT "				# use this prompt variation
 else
-    PS1="$__PS1 % "							# non-root users get this prompt
+    PS1="$__PS1 % "						# non-root users get this prompt
 fi
 
+# -----------------------------------------------------------------------------
+# Michael's transitory work stuff
+# -----------------------------------------------------------------------------
+alias loadtab='arb ; sleep 10 ; fastboot flash "recovery" "recovery.img" ; fastboot flash "boot" "boot.img" ; fastboot flash "system" "system.img" ; fr'
 # --- end of .bash_credenceid ---
