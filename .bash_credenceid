@@ -133,6 +133,9 @@ alias aasleep='adb shell svc power stayon false'
 # -----------------------------------------------------------------------------
 alias ap='adb push'						# ap source_file destination_location
 
+FB="$HOME/android-backup.ab"			# backup filename
+alias abackup="adb backup -obb -apk -shared -all -f $FB" # create backup
+alias arestore="adb restore $FB"		# restore from backup
 # -----------------------------------------------------------------------------
 # Get a screenshot (screencap) from the attached Android device
 #
