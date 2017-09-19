@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # -----------------------------------------------------------------------------
 # Michael Sattler <Michael.Sattler@CredenceID.com>
@@ -98,8 +98,9 @@ alias adn='adb shell reboot -p'			# another way to reboot into normal mode
 # -----------------------------------------------------------------------------
 # Managing APK (Android Package Kit) files
 #
-# Android apps are delivered as APKs. 
+# Android apps are delivered as APKs.
 # -----------------------------------------------------------------------------
+#
 alias all='adb shell pm list packages -f | sort'	# sorted list of packages
 alias al='adb shell pm list packages -f | grep credenceid'	# our installed APKs
 alias alp='adb shell pm list packages -f | sort'
@@ -134,8 +135,11 @@ alias aasleep='adb shell svc power stayon false'
 alias ap='adb push'						# ap source_file destination_location
 
 FB="$HOME/android-backup.ab"			# backup filename
+# shellcheck disable=SC2139
 alias abackup="adb backup -obb -apk -shared -all -f $FB" # create backup
+# shellcheck disable=SC2139
 alias arestore="adb restore $FB"		# restore from backup
+
 # -----------------------------------------------------------------------------
 # Get a screenshot (screencap) from the attached Android device
 #
@@ -158,13 +162,20 @@ alias getpix="adb shell mkdir -p \$_PD ; adb shell screencap \$_PD/\$_PF ; \
 # -----------------------------------------------------------------------------
 alias am='adb shell mount system'		# mount UNROOTED device's file system
 alias as='adb shell'					# start a shell session on the device
-alias ak='adb kill-server ; adb start-server'	# stop and start the ADB server
+alias ak='adb kill-server; ADB_LIBUSB=1 adb start-server; adb host-features'	# stop and start the ADB server
 alias ac='adb logcat | grep com.credenceid'	# show only log entries by CID apps
 alias adate="adb shell date -s \`date \"+%Y%m%d.%H%M%S\"\`"	# set time on device
 alias adw='adb wait-for-device'			# don't start until any device appears
+alias cpu='adb shell cat "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"'
 alias sel='adb shell getenforce'		# SELinux enforced?
 alias awipe='adb shell am broadcast -a android.intent.action.MASTER_CLEAR'
 alias tabbatt='adb shell cat /sys/class/power_supply/bq27520-battery/device/df_version'
+
+alias abackup='adb backup -apk -all -f ~/Desktop/backup.ab'
+alias arestore='adb restore ~/Desktop/backup.ab'
+
+alias upj='sudo launchctl load /Library/LaunchDaemons/org.jenkins-ci.plist'
+alias dnj='sudo launchctl unload /Library/LaunchDaemons/org.jenkins-ci.plist'
 
 # -----------------------------------------------------------------------------
 # Install CID and test apps
@@ -179,6 +190,7 @@ export _V="20170329-sdk-1.17.00"
 alias alli='for a in C-Service.apk C-SdkApp.apk ; do ai "$_D/$_V/apk/$a" ; done ; for a in C-StressApi.apk C-Demo.apk ; do ai "$_D/$_V-cid-internal-apps/$a" ; done'
 
 # uninstall the entire CID suite
+#for a in $( adb shell 'pm list packages -f' | grep -e '/data/app' | grep 'com.credenceid'| sed -e 's/.*=//' -e 's/\r//g' | tr -d '\r' ) ; do echo -n Uninstalling $a... ; au $a ; done
 alias allu='for a in stressapi sdkapp service demo ; do printf "Uninstalling $a..." ; au com.credenceid.$a ; done'
 
 # -----------------------------------------------------------------------------
@@ -202,8 +214,10 @@ alias g='git'							# save 66% of typing
 complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
 function ga() { git add "$1"\ ; }		# add files to be tracked
 function gc() { git commit -m "$@" ; }	# commit changes locally
+function keysx() { tr '[:upper:]' '[:lower:]' < "$1" | sort | uniq | wc -l ; }
 
 alias gd='git diff'						# see what happened
+alias gh='git log --follow '			# git history for a file
 alias gi='git check-ignore -v *'		# see what's being ignored
 #alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
 alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
@@ -294,7 +308,7 @@ BOLD="\[$(tput bold)\]"					# bold the following
 RESET="\[$(tput sgr0)\]"				# reset colors & characteristics
 
 __ROOT="${RED}#${RESET}"				# root prompt (#) is red
-__PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h${RESET}"	# prompt part
+__PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h ${YELLOW}\w{RESET}"	# prompt part
 
 if [ "$(id -u)" -eq 0 ];				# if we're the superuser (root)
 then
@@ -304,7 +318,22 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# *nix command history
+# -----------------------------------------------------------------------------
+alias h='history'							# see what happened before
+HISTCONTROL=ignoredups:erasedups:ignorespace # no dups;
+HISTFILE=~/.bash_eternal_history			# "eternal" ~ don't get truncated
+# was eternal (empty); now set at 999 (three digits easier to grok)
+HISTFILESIZE=999							# "eternal" ~ no max size
+HISTSIZE=999								# "eternal" ~ no max size
+HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
+shopt -s checkwinsize						# after each command check window size...
+shopt -q -s histappend >/dev/null 2>&1		# append, don't overwrite, history file
+export PROMPT_COMMAND='history -a' >/dev/null 2>&1
+
+# -----------------------------------------------------------------------------
 # Michael's transitory work stuff
 # -----------------------------------------------------------------------------
 alias loadtab='arb ; sleep 10 ; fastboot flash "recovery" "recovery.img" ; fastboot flash "boot" "boot.img" ; fastboot flash "system" "system.img" ; fr'
+alias allimg='for i in *.img ; do echo ${i%.img} ; fastboot flash ${i%.img} $i ; done'
 # --- end of .bash_credenceid ---
