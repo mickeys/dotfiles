@@ -1,4 +1,12 @@
-source /Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/vim/plugin/powerline.vim
+"#source /Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/vim/plugin/powerline.vim
+"set rtp+=/usr/local/lib/python2.7/site-packages/powerline/bindings/vim
+
+if has("gui_running")
+   let s:uname = system("uname")
+   if s:uname == "Darwin\n"
+      set guifont=Meslo\ LG\ S\ for\ Powerline
+   endif
+endif
 "
 let g:netrw_dirhistmax=0		" don't want .netrwhist history file
 set printoptions=header:0		" don't print page headers0
@@ -21,4 +29,6 @@ set shiftround					" always indent/outdent to the nearest tabstop
 "set expandtab					" use spaces instead of tabs
 "set smarttab					" use tabs at the start of a line, spaces elsewhere
 set viminfo=					" no logging of edit actions
+
+au BufNewFile,BufRead *.gp,*.gnu,*.gnuplot*,.plt,*.gnuplot setf gnuplot
 
