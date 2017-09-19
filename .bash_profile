@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #set -x
 # shellcheck disable=1090,1091
-####!/usr/bin/env bash
 #set -u #o pipefail							# unofficial bash strict mode
 #IFS=$'\n\t'
 
@@ -36,21 +35,21 @@
 # +-------------------+-------------------------------------------------------+
 #
 # Additionally, this script runs:
-# 
+#
 # +-------------------+-------------------------------------------------------+
 # | setTermColors()   | use color terminal capabilities                       |
 # | setTermPrompt()   | sets the terminal prompt                              |
 # +-------------------+-------------------------------------------------------+
-# 
+#
 # Then, at the bottom, is a section with all the "universal" customizations,
 # including a long list of command aliases, grouped by software package. These
 # make working at the command-line much faster and easier.
-# 
+#
 # Lastly, tweaks to the command search path are done.
-# 
+#
 # I'll explain the configuration options in each of the sections below. Feel
 # free to use this as a jumping-off point in tweaking your own *nix machines.
-# 
+#
 # Find me at ~ https://github.com/mickeys/dotfiles/blob/master/.bash_profile
 # -----------------------------------------------------------------------------
 # QA NOTE: if $BASH_VERSION < v4 parts of this script will silently not execute.
@@ -129,6 +128,8 @@ case "$os" in								# do OS-appropriate things
 		AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
 		WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
 		;; # end darwin
+
+		alias lcd='for f in *; do mv "$f" "$f.tmp"; mv "$f.tmp" "`echo $f | tr "[:upper:]" "[:lower:]"`"; done'
 	# ---------------------------------------------------------------------
 	linux)
 		;; # end linux
@@ -466,17 +467,27 @@ doOsSpecifics() {
 		darwin)								# Mac OS X
 
 			alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
-			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+			alias ftfix='sudo killall VDCAssistant ; sudo killall AppleCameraAssistant'
 			alias lastmaint="ls -al /var/log/*.out"		# when did we last tidy up?
-			alias ll='ls -FGlAhp'						# ls w kb, mb, gb
- 			alias ls='ls -F --time-style=iso'			# ls special chars
+			alias ll='gls -FGlAhp'						# ls w kb, mb, gb
+ 			alias ls='gls -F --time-style=iso'			# ls special chars
 			alias lock='open /System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app'
 			alias maint="sudo periodic daily weekly monthly"	# tidy up :-)
+			alias p='gnuplot'
 			alias resizesb='sudo hdiutil resize -size '	# 6g BUNDLENAME'
 			alias swap='swaps ; sudo dynamic_pager -L 1073741824 ; swaps' # force swap garbage collection
 			alias swaps='ls -alh /var/vm/swapfile* | wc -l'	# how many swap files?
 			trash() { mv "$@" ~/.Trash; }		# move to trash (vs deleting asap)
 			#tw() { open -a /Applications/TextWrangler.app/ "$1" }	# my GUI editor
+
+			# -----------------------------------------------------------------
+			# Volume
+			# -----------------------------------------------------------------
+			alias fixvol='sudo killall -9 coreaudiod'	# when volume buttons don't
+
+			alias min='osascript -e "set volume output volume 0"'
+			alias off='osascript -e "set volume output volume 5"'
+			alias max='osascript -e "set volume output volume 100"'
 
 			# -----------------------------------------------------------------
 			# Display Wi-Fi network password for one previously connected...
@@ -490,7 +501,7 @@ doOsSpecifics() {
 			alias wifipow="/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -s"
 
 			# -----------------------------------------------------------------
-			# cd (pushd) to the macOS's foremost Finder window 
+			# cd (pushd) to the macOS's foremost Finder window
 			# -----------------------------------------------------------------
 			cdf () {
 				currFolderPath=$( /usr/bin/osascript <<EOT
@@ -635,29 +646,6 @@ doHostThings() {
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
-# use powerline and gitstatus-powerline for prompts & status lines (or go
-# old-school on systems without it installed)
-#
-# FYI: configs in ${HOME}/.config/powerline/themes/shell/
-# -----------------------------------------------------------------------------
-POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
-if [[ "$POWERLINE_PATH" != "" ]]; then
-	PATH="$PATH:$POWERLINE_PATH/../scripts"
-	powerline-daemon -q
-	export POWERLINE_BASH_CONTINUATION=1
-	export POWERLINE_BASH_SELECT=1
-	# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
-	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
-else
-	dir="${BASH_SOURCE%/*}"					# point to this script's location
-	if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use PWD
-	# shellcheck source=/Users/michael/.set_colors.sh
-	. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
-	# shellcheck source=/Users/michael/.set_prompt.sh
-	. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
-	setTermPrompt							# use old-school prompt
-fi
-# -----------------------------------------------------------------------------
 # All-*NIX do everywhere command aliasing. Works on all bash.
 # -----------------------------------------------------------------------------
 
@@ -685,24 +673,21 @@ export LESS_TERMCAP_us=$'\E[01;32m'
 # *nix command history
 # -----------------------------------------------------------------------------
 alias h='history'							# see what happened before
-HISTCONTROL=ignoredups:erasedups:ignorespace # no dups; 
+HISTCONTROL=ignoredups:erasedups:ignorespace # no dups;
 HISTFILE=~/.bash_eternal_history			# "eternal" ~ don't get truncated
 # was eternal (empty); now set at 999 (three digits easier to grok)
 HISTFILESIZE=999							# "eternal" ~ no max size
 HISTSIZE=999								# "eternal" ~ no max size
 HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
 shopt -s checkwinsize						# after each command check window size...
-shopt -s histappend							# append, don't overwrite, history file
-
-# Avoid duplicates
-export HISTCONTROL=
-# When the shell exits, append to the history file instead of overwriting it
-shopt -s histappend
+shopt -q -s histappend >/dev/null 2>&1		# append, don't overwrite, history file
+export PROMPT_COMMAND='history -a' >/dev/null 2>&1
 
 # -----------------------------------------------------------------------------
 # other environment settings
 # -----------------------------------------------------------------------------
-export EDITOR=/usr/bin/vim					# graphic text editor of choice
+#export EDITOR=/usr/bin/vim					# graphic text editor of choice
+export EDITOR=/usr/bin/vi					# graphic text editor of choice
 # http://www.thegeekstuff.com/2013/12/bash-completion-complete/
 # shellcheck source=/usr/local/etc/bash_completion
 if [ -f "$(brew --prefix)/etc/bash_completion" ] ; then . "$(brew --prefix)/etc/bash_completion" ; fi	# hey, check out .inputrc
@@ -715,25 +700,19 @@ alias ~="cd ~"                              # Go to the home directory
 alias cd..='cd ../'                         # Go back 1 directory level (for fast typers)
 alias ..='cd ../'                           # Go back 1 directory level
 alias ...='cd ../../'                       # Go back 2 directory levels
-alias .3='cd ../../../'                     # Go back 3 directory levels
-alias .4='cd ../../../../'                  # Go back 4 directory levels
-alias .5='cd ../../../../../'               # Go back 5 directory levels
-alias .6='cd ../../../../../../'            # Go back 6 directory levels
-#alias diffc="diff --old-group-format=$'\e[0;31m%<\e[0m' \
-#     --new-group-format=$'\e[0;31m%>\e[0m' \
-#     --unchanged-group-format=$'\e[0;32m%=\e[0m'"
-     
+
 #alias cpbash='scp ~/.bash_profile USERNAME_OVER_THERE@hostname:'
 alias ccze='ccze -A -o nolookups'			# log colorize more quickly
+alias d='echo -en "\033[31;1;31m**********************************************************************************************************************\033[0m\n"'
 alias dirs='dirs -v'						# show dir stack vertically
 alias df='df -h'							# show human-readable sizes
 alias e="exit"								# end this shell
 alias grepc='grep --color=auto'				# grep shows matched in color
 alias kb='bind -p | grep -F "\C"'			# see key bindings (see .inputrc)
 alias kurl='curl -#O'						# download and save w orig filename
-alias ll='ls -lAhF'							# ls w kb, mb, gb
-alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
-alias ls="ls -F"							# ls special chars
+alias ll='gls -lAhF'							# ls w kb, mb, gb
+alias lr='gls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
+alias ls='gls -FG --time-style=iso'
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
 alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
@@ -746,7 +725,8 @@ alias sc='shellcheck -x'					# follow paths to other scripts
 alias sink='sync;sync;sync'					# write filesystem changes
 alias sp='source ~/.bash_profile'			# re-load this file
 alias tca='echo `TZ=America/Los_Angeles date "+%H:%M %d/%m" ; echo $TZ`'
-alias vi='vim'								# colored vi editor
+#alias vi='vim'								# colored vi editor
+alias vi='/usr/bin/vi' # high sierra breakage
 alias which='type -all'                     # find executables
 
 ###remove### path() { echo "${PATH//:/$'\n'}" ; }
@@ -896,8 +876,9 @@ alias cdapps="cd \$CREDENCEID/code/CredenceIDApps"
 # shellcheck disable=SC2139
 alias cdcid="cd \$CREDENCEID/"
 alias cdd="cd \$CREDENCEID/devops"
-alias cdtw="cd \$CREDENCEID/devops/twizzler"
-alias cdt2r="cd \$CREDENCEID/devops/2r-trident/nix"
+alias cdt2r="cd \$CREDENCEID/devops/t2/nix"
+alias cdc1="cd /Users/michael/Box\ Sync/official__releases__PUBLIC/os/credence-one"
+alias cdbcat="cd \$CREDENCEID/devops/bcat"
 alias cdqa="cd \$CREDENCEID/qa"
 
 # ---- one-offs useful for a short time ----
@@ -947,7 +928,7 @@ fi
 # -----------------------------------------------------------------------------
 unset DEBUG ; unset RUN_TESTS ; unset SILENT ; unset TEST_YOKE # QA stuff
 #set +uo
-if (( PROFILING )) ; then 
+if (( PROFILING )) ; then
 	set +x
 	exec 2>&3 3>&-
 fi
@@ -956,7 +937,7 @@ fi
 # Manage $PATH and $MANPATH.
 # -----------------------------------------------------------------------------
 PATH="$(brew --prefix homebrew/php/php70)/bin:$PATH" # PHP 7.x
-PATH=$PATH:/usr/local/mysql/bin				# MySQL
+PATH="/usr/local/opt/python/libexec/bin:$PATH"	# homebrew python
 MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$MANPATH"	# GNU
 PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"		# GNU
 #PATH=/opt/ImageMagick:$PATH				# ImageMagick
@@ -973,9 +954,29 @@ PY_BIN=$(python -c 'import sys; print sys.prefix')'/bin'	# ask Python right spot
 if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 
 # -----------------------------------------------------------------------------
-# Setting PATH for Python 2.7. Original version saved in .bash_profile.pysave
+# use powerline and gitstatus-powerline for prompts & status lines (or go
+# old-school on systems without it installed)
+#
+# FYI: configs in ${HOME}/.config/powerline/themes/shell/
 # -----------------------------------------------------------------------------
-PATH="/Library/Frameworks/Python.framework/Versions/2.7/bin:${PATH}"
+#POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
+POWERLINE_PATH=$( pip show powerline-status | grep Location | cut -d " " -f 2 )
+if [[ "$POWERLINE_PATH" != "" && -e "${POWERLINE_PATH}/bindings/bash/powerline.sh" ]]; then
+	PATH="$PATH:$POWERLINE_PATH/../scripts"
+	powerline-daemon -q
+	export POWERLINE_BASH_CONTINUATION=1
+	export POWERLINE_BASH_SELECT=1
+	# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
+	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
+else
+	dir="${BASH_SOURCE%/*}"					# point to this script's location
+	if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use PWD
+	# shellcheck source=/Users/michael/.set_colors.sh
+	. "$dir/.set_colors.sh"					# pre-powerline, set prompt colors
+	# shellcheck source=/Users/michael/.set_prompt.sh
+	. "$dir/.set_prompt.sh"					# pre-powerline, set prompt
+	setTermPrompt							# use old-school prompt
+fi
 
 # -----------------------------------------------------------------------------
 # Lastly, put my stuff at the front of PATH so it's found and used first.
