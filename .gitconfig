@@ -9,7 +9,7 @@
 	default = simple
 [core]
 	excludesfile = /Users/msattler/.gitignore_global
-	whitespace = trailing-space,space-before-tab
+	whitespace = tabwidth=4
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
 	path = 
