@@ -1,4 +1,5 @@
 #!/usr/bin/env bash							# search PATH to get bash ~ portable
+#set -x
 
 # =============================================================================
 # Configure bash's command prompt to display useful information *and* to be in
@@ -64,10 +65,10 @@ setTermPrompt() {
 			if [ $(id -u) -eq 0 ];
 			then # you are root, make the prompt red
 				#PS1="[\e[01;34m\u @ \h\e[00m]----[\e[01;34m$(pwd)\e[00m]\n\e[01;31m#\e[00m "
-				_prmt="${RED} #"
+				_prmt="\[${RED}\] #"
 			else
 				#PS1="[\e[01;34m\u @ \h\e[00m]----[\e[01;34m$(pwd)\e[00m]\n$ "
-				_prmt="${GREEN} %"
+				_prmt="\[${GREEN}\] %"
 			fi
 ##			export PS1="${BOLD}${hostColor}\H ${BOLDOFF}${YELLOW}\! ${hostColor}\W ${NONE}\$ "
 ##			export PS1="${BOLD}${hostColor}${HOSTNAME%%.*} ${BOLDOFF}${YELLOW}\! ${hostColor}\W ${NONE}\$ "
@@ -84,15 +85,15 @@ setTermPrompt() {
 if ((BASH_VERSINFO[0] < 4)); then echo "Error: bash 4.0 or later needed; quitting." >&2; exit 1; fi
 # shellcheck disable=SC2034
 declare -A COLORS=( [BLACK]=0 [RED]=1 [GREEN]=2 [YELLOW]=3 [PURPLE]=4 [PINK]=5 [BLUE]=6 [GREY]=7 )
-			export BOLD="$(tput bold)"
-			export BOLDOFF="$(tput sgr0)"
+			export BOLD="\[$(tput bold)\]"
+			export BOLDOFF="\[$(tput sgr0)\]"
 
-			_time="$(tput setaf ${COLORS[YELLOW]})\A"
-			_hist="$(tput setaf ${COLORS[PINK]})\!"
+			_time="\[$(tput setaf ${COLORS[YELLOW]})\]\A"
+			_hist="\[$(tput setaf ${COLORS[PINK]})\]\!"
 			_host="${hostColor}${HOSTNAME%%.*}" # ${BOLD}\w${BOLDOFF}
-			_path="$(tput setaf ${COLORS[PURPLE]})\w"
+			_path="\[$(tput setaf ${COLORS[PURPLE]})\]\w"
 
-			export PS1=".set_prompt.shX ${_time} ${_hist} ${_host} ${_path}${_prmt}$BOLDOFF "
+			export PS1="${_time} ${_hist} ${_host} ${_path}${_prmt}$BOLDOFF "
 
 		fi # end of if-terminal-supports-color
 	fi # end of if-terminal
