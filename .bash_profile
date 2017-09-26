@@ -127,9 +127,8 @@ case "$os" in								# do OS-appropriate things
 
 		AIRPORT='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
 		WIFI=$( $AIRPORT -I | grep "\bSSID" | sed -e 's/^.*SSID: //' )
-		;; # end darwin
-
 		alias lcd='for f in *; do mv "$f" "$f.tmp"; mv "$f.tmp" "`echo $f | tr "[:upper:]" "[:lower:]"`"; done'
+		;; # end darwin
 	# ---------------------------------------------------------------------
 	linux)
 		;; # end linux
@@ -984,6 +983,8 @@ fi
 __WORK_BIN="${CREDENCEID}/devops/bin:${CREDENCEID}/bin"	# work code
 __PERS_BIN="$HOME/bin"						# personal executable binaries
 PATH=.:${__PERS_BIN}:${__WORK_BIN}:$PATH	# cwd, my bin, work bin
+
+PATH=~/Library/Android/sdk/platform-tools:$PATH
 
 cleanPath									# remove duplicates from PATH
 export PATH									# share and enjoy!
