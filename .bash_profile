@@ -222,17 +222,39 @@ getDomainnames() {
 	# -------------------------------------------------------------------------
 	# Method 2: get domain from your ISP
 	# -------------------------------------------------------------------------
-	if eval nc -z -w 1 google.com 80 "$SILENT" ; then # only if network is up
+	vpn=$( netstat -rn | grep utun1 | wc -l ) # check for any tunnels in action
+	if [[ $vpn -eq 0 ]] ; then
+		target='www.google.com'				# the machine we're trying to ping
+		lookup='o-o.myaddr.l.google.com'
+		dns='8.8.8.8'						# the DNS nameserver being used
+	else									# Ah, the Great Firewall of China
+		target='baidu.com'
+		lookup='baidu.com'
+		dns='61.139.2.69'					# DNS for Chengdu, Sichuan, China
+	fi
+
+	debug "nc -z -w 1 $target 80"
+	if eval nc -z -w 1 "$target" 80 "$SILENT" ; then # only if network is up
+		debug "the network is up, continuing..."
+
 		#external_ip="$( dig +short myip.opendns.com @resolver1.opendns.com )"
-		external_ip=$( host -t txt o-o.myaddr.l.google.com 8.8.8.8 |
-          grep -oP "client-subnet \K(\d{1,3}\.){3}\d{1,3}" )
-		# --> like 1.2.3.4
-		fqdn=$( host "$external_ip" )
-		# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net.
-		fqdn=${fqdn:0:${#fqdn}-1}			# strip dot from end
-		# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net
-		d[${#d[@]}]=$(echo "$fqdn" | rev | cut -d. -f1,2 | rev)
-		# --> comcast.net
+		debug "host -t txt $lookup $dns"
+		external_ip=$( host -t txt "$target" "$dns" | grep -oP "client-subnet \K(\d{1,3}\.){3}\d{1,3}" )
+		if [[ ${#external_ip} -eq 0 ]] ; then
+			debug "external_ip is empty, giving up..."
+		else
+			debug "external_ip is \"$external_ip\""
+			# --> like 1.2.3.4
+			fqdn=$( host "$external_ip" )
+			debug "fqdn is $fqdn"
+			# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net.
+			fqdn=${fqdn:0:${#fqdn}-1}			# strip dot from end
+			# --> 1.2.3.4.in-addr.arpa domain name pointer c-73.hsd1.ca.comcast.net
+			d[${#d[@]}]=$(echo "$fqdn" | rev | cut -d. -f1,2 | rev)
+			# --> comcast.net
+		fi
+	else
+		debug "network is down, giving up..."
 	fi
 	# shellcheck disable=SC2128
 	debug "fqdn parsing results in \"$d[${#d[@]}]\""
@@ -268,7 +290,7 @@ doLocByDNS() {
 } # end of doLocByDNS
 
 # -----------------------------------------------------------------------------
-# use airport command to get access point name
+# use airport command to get Access Point name
 # -----------------------------------------------------------------------------
 doLocByWifi() {
 	if [[ ${BASH_VERSINFO[0]} -lt 4 ]] ; then return ; fi
@@ -387,16 +409,16 @@ doAllTheTests() {
 	__i__=1									# just a simple counter
 # shellcheck disable=SC2034
 	__l__=${#tests[@]}						# total number of tests
-	for c in "${!tests[@]}" ; do				# iterate over the array of tests
+	for c in "${!tests[@]}" ; do			# iterate over the array of tests
 		# run test
 		eval "$c $SILENT"					# evaluate the test command line
 #		r=$?								# save the test return value
 
 		# generate output
-#xyzzy		pad "$__i__" "${#__l__}" -n				# output number of this test
+#xyzzy		pad "$__i__" "${#__l__}" -n		# output number of this test
 #		i="((__i__++))						# on to next in the array
 #		echo -n "/$__l__ ~ "				# output total number of tests
-#		passFail "$r" "${tests[$c]}"			# output human-readable pass or fail
+#		passFail "$r" "${tests[$c]}"		# output human-readable pass or fail
 		echo " ~ $c"						# output the test command line
      done
 }
@@ -525,15 +547,15 @@ EOT
 			kilmdn='sudo killall -HUP mDNSResponder'	# 10.12, 10.11, 10.10.4+
 			discov='sudo discoveryutil mdnsflushcache'	# 10.10.{1-3}
 			# udnsfl='sudo mdnsfutil udnsflushcaches'	# alleged 10.4 ~ undocumented
-			dscache='sudo dscacheutil -flushcache'	# 10.6
-			lookupd='sudo lookupd -flushcache'		# 10.5
+			dscache='sudo dscacheutil -flushcache'		# 10.6
+			lookupd='sudo lookupd -flushcache'			# 10.5
 			# mdnsfl='sudo mdnsfutil mdnsflushcache'	# alleged unknown os ver
 
 			# -----------------------------------------------------------------
 			# do things in darwin, by os version
 			# -----------------------------------------------------------------
-			v=$( sw_vers -productVersion )				# get version no (eg 10.10.3)
-			vparts=(${v//./ })							# split apart into parts
+			v=$( sw_vers -productVersion )			# get version no (eg 10.10.3)
+			vparts=( ${v//./ } )					# split apart into parts
 
 			case "${vparts[0]}.${vparts[1]}" in
 
@@ -584,6 +606,7 @@ EOT
 			# enable git completion
 			# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 			source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
+			source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
 		    export BLOCKSIZE=1k				# default blocksize for ls, df, du
 
 			;;	# end darwin
@@ -657,7 +680,7 @@ export LANG=en_us.UTF-8						# char set
 export PAGER=less							# tell the system to use less
 export LESSCHARSET='utf-8'					# was 'latin1'
 export LESSOPEN='|/usr/bin/lesspipe.sh %s 2>&-' # Use if lesspipe.sh exists
-export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
+#export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
 
 # LESS man page colors (makes Man pages more readable).
 export LESS_TERMCAP_mb=$'\E[01;31m'
@@ -715,6 +738,22 @@ alias ls='gls -FG --time-style=iso'
 alias mydate='date +%Y%m%d_%H%M%S'			# more useful for sorting
 alias netspeed='time curl -o /dev/null http://wwwns.akamai.com/media_resources/NOCC_CU17.jpg'
 alias path='echo -e ${PATH//:/\\n}'         # show all executable Paths
+
+# -------------------------------------------
+# Test net connection to local machines...
+# -------------------------------------------
+alias net='nc -dzw1 google.com 80'			# most lightweight way to test net & DNS
+png () { i='' ; h="$1" ; n="$2" ;
+	if [[ $n && ${n-_} ]] ; then i="-i $n" ; fi ;
+	c="ping -A $i $h | grep -oP 'time=\K(\d*)\.\d*'" ; # cut -d '=' -f4 ;
+	echo $c
+	eval $c
+}
+alias pch='png 61.139.2.69'					# Chengdu DNS
+alias pcn='png 123.125.114.144 3'			# cn ~ baidu.com
+alias pgg='png 8.8.8.8 3'					# Google DNS nameserver
+alias pvt='png vantrontech.com.cn 3'
+
 alias pd='pushd'							# see also 'popd'
 alias psall='ps -afx'
 alias pstop='ps -creo command,pid,%cpu | head -10'
@@ -830,7 +869,7 @@ extract () {
 		*.gz)        gunzip "$1"      ;;	# gzip
 		*.tar)       tar xf "$1"      ;;	# tar
 		*.tbz2)      tar xjf "$1"     ;;	# bzip2-compressed tar archive
-		*.tgz)       tar xzf "$1"     ;;	 # really tar.gz
+		*.tgz)       tar xzf "$1"     ;;	# really tar.gz
 		*.zip)       unzip "$1"       ;;	# zip (pkware)
 		*.Z)         uncompress "$1"  ;;	# compress
 		*.7z)        7z x "$1"        ;;	# 7-Zip
@@ -839,6 +878,58 @@ extract () {
 	 else
 		 echo "'$1' is not a valid file"
 	 fi
+}
+
+# -----------------------------------------------------------------------------
+# make backups into a local directory before you're ready for a git commit.
+# add a datestamp between the filename and extension so you can still open file.
+# -----------------------------------------------------------------------------
+bak () {
+	bkdir='./bak'							# write backups in your dir
+	dn="$( dirname "$1" )"					# /path/to/file --> /path/to
+	bn="$( basename "$1" )"					# /path/to/file --> file
+	fn="${bn%.*}"							# filename: a.b.c.xyz --> a.b.c
+	ex="${bn##*.}"							# extension: a.b.c.xyz --> xyz
+
+	if [ ! "$1" ] ; then					# did you pass me a anything to backup?
+		echo "usage: $0 [ file | directory ]"
+		return								# nope. get it right, you!
+	elif [ ! -w "$dn" ] ; then				# can I put a backup here?
+		echo "$0: fatal: \"$dn\" not writable; quitting."
+		return								# nope. try again
+	elif [ ! -e "$1" ] ; then				# does the source exist?
+		echo "$0: '$1' doesn't exist; quitting."
+		return								# what are you thinking of?
+	fi
+
+	if [ -d "$1" ] ; then r='/'	; l='-r' ; fi	# is dir? tweak syntax
+
+	mkdir -p "$bkdir"						# in case it doesn't exist
+	d=$( date +%Y%m%d_%H%M%S )				# allow breadcrumbing through time
+	if ! cp $L "$1" "$bkdir/${fn}_${d}.${ex}$R" ; then echo "$bn: error occured!"; fi
+}
+
+# ------------------------------------------------------------------------------
+# Enable a terminal window to communicate with a serial port. Disconnecting it
+# occasionally leaves the terminal window wonky. Try:
+#
+# alias screenfix='reset; stty sane; tput rs1; clear; echo -e "\033c"'
+#
+# NOTE: you may have to type 'reset' in terminal after disconnect serial device.
+# ------------------------------------------------------------------------------
+# Thank you, Intel:
+# https://software.intel.com/en-us/setting-up-serial-terminal-on-system-with-mac-os-x
+# ------------------------------------------------------------------------------
+serial() {
+	ports=$( ls /dev/cu.usbserial-* )		# get the USB serial port(s)
+	numPorts=$( echo "$ports" | wc -l )		# count the number of ports found
+
+	if (( $(( numPorts )) != 1 )) ; then	# which one? we can't read your mind
+		echo "$0: fatal: expected to find 1 usb serial port, found $((numPorts)); quitting."
+		exit								# we give up
+	else
+		screen "$ports" 115200 -L			# unambiguous; do the serial thing
+	fi
 }
 
 #TO-DO: put the following in a doHome() doWork() doElsewhere()
