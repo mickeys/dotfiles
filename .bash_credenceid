@@ -83,7 +83,9 @@ export ADB_TRACE=''						# '' or 'all' - show connection traffic
 # List and reboot devices
 # -----------------------------------------------------------------------------
 alias ad='adb devices'					# list devices in adb mode
+alias ads='adb devices | grep -v -e "List of devices attached" -e "^[[:space:]]*$" | wc -l'
 alias fd='fastboot devices'				# list devices in fastboot mode
+alias fds='fastboot devices | wc -l'	# how many fastboot devices?
 alias aw='adb wait-for-device ; ad'		# wait until device(s) appear; list them
 
 alias ar='adb reboot'					# reboot into normal adb operating mode
@@ -308,7 +310,7 @@ BOLD="\[$(tput bold)\]"					# bold the following
 RESET="\[$(tput sgr0)\]"				# reset colors & characteristics
 
 __ROOT="${RED}#${RESET}"				# root prompt (#) is red
-__PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h ${YELLOW}\w{RESET}"	# prompt part
+__PS1="${YELLOW}\A ${CYAN}\! ${BOLD}${BLUE}\h ${YELLOW}\w${RESET}"	# prompt part
 
 if [ "$(id -u)" -eq 0 ];				# if we're the superuser (root)
 then
