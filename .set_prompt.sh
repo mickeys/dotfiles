@@ -90,10 +90,10 @@ declare -A COLORS=( [BLACK]=0 [RED]=1 [GREEN]=2 [YELLOW]=3 [PURPLE]=4 [PINK]=5 [
 
 			_time="\[$(tput setaf ${COLORS[YELLOW]})\]\A"
 			_hist="\[$(tput setaf ${COLORS[PINK]})\]\!"
-			_host="${hostColor}${HOSTNAME%%.*}" # ${BOLD}\w${BOLDOFF}
+			_host="\[]${hostColor}${HOSTNAME%%.*}\]" # ${BOLD}\w${BOLDOFF}
 			_path="\[$(tput setaf ${COLORS[PURPLE]})\]\w"
 
-			export PS1="${_time} ${_hist} ${_host} ${_path}${_prmt}$BOLDOFF "
+			export PS1="${_time} ${_hist} ${_host} ${_path}${_prmt}\[${BOLDOFF}\] "
 
 		fi # end of if-terminal-supports-color
 	fi # end of if-terminal
