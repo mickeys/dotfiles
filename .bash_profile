@@ -1052,10 +1052,10 @@ if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 #POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
 POWERLINE_PATH=$( pip show powerline-status | grep Location | cut -d " " -f 2 )
 if [[ "$POWERLINE_PATH" != "" && -e "${POWERLINE_PATH}/bindings/bash/powerline.sh" ]]; then
-	PATH="$PATH:$POWERLINE_PATH/../scripts"
-	powerline-daemon -q
-	export POWERLINE_BASH_CONTINUATION=1
-	export POWERLINE_BASH_SELECT=1
+	PATH="$PATH:$POWERLINE_PATH/../scripts"	#
+	powerline-daemon -q						#
+	export POWERLINE_BASH_CONTINUATION=1	#
+	export POWERLINE_BASH_SELECT=1			#
 	# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
 	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
 else

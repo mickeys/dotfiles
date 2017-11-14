@@ -233,36 +233,33 @@ alias gss='git stash save'				# git-stash(1)
 # -----------------------------------------------------------------------------
 # device-type files
 #
-# Populate device-type files without needing to memorize the exact text string.
-# -----------------------------------------------------------------------------
-# credenceone-v1 ~ fingerprint
-alias dtc1='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v1 > /sdcard/credenceid/device-type"'
-# credenceone-v2 ~ fingerprint, card reader
-alias dtc2='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v2 > /sdcard/credenceid/device-type"'
-# credenceone-v3 ~ fingerprint, card reader, mrz
-alias dtc3='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-v3 > /sdcard/credenceid/device-type"'
-# credenceone-ektp ~ SAM card
-alias dtce='adb shell "mkdir -p /sdcard/credenceid/ ; echo credenceone-ektp > /sdcard/credenceid/device-type"'
-
-# tablet prototype
-alias dtsl='adb shell "mkdir -p /sdcard/credenceid/ ; echo starlight > /sdcard/credenceid/device-type"'
-# tablet production
-alias dttb='adb shell "mkdir -p /sdcard/credenceid/ ; echo credencetab > /sdcard/credenceid/device-type"'
-
-alias dtt1='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-1 > /sdcard/credenceid/device-type"'
-alias dtt2='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-2 > /sdcard/credenceid/device-type"'
-alias dtt2r='adb shell "mkdir -p /sdcard/credenceid/ ; echo Trident-2R > /sdcard/credenceid/device-type"'
-# no longer used, legacy code (per Mark Evans)
-alias dtt3='adb shell "mkdir -p /sdcard/credenceid/ ; echo trident-3 > /sdcard/credenceid/device-type"'
-
-alias dttw='adb shell "mkdir -p /sdcard/credenceid/ ; echo twizzler > /sdcard/credenceid/device-type"'
-
-# -----------------------------------------------------------------------------
 # Populate device-type files by supplying the exact text string.
 #
-# Usage: dt <type> (where type can be seen in the previous section.
+# Usage: dt <type> (where type can be seen in the following section.
 # -----------------------------------------------------------------------------
 function dt { adb shell "mkdir -p /sdcard/credenceid/ ; echo $1 > /sdcard/credenceid/device-type" ; }
+
+# -----------------------------------------------------------------------------
+# Populate device-type files without needing to memorize the exact text string.
+# -----------------------------------------------------------------------------
+alias dtc1="dt credenceone-v1"			# c1 ~ fingerprint
+alias dtc2="dt credenceone-v2"			# c1 ~ fingerprint, nfc card
+alias dtc3="dt credenceone-v3"			# c1 ~ fingerprint, nfc card, mrz
+alias dtce="dt credenceone-ektp"		# c1 ~ SAM card
+
+alias dtsl="dt starlight"				# tab (obsolete) prototype
+alias dttb="dt credencetab"				# tab (obsolete) production
+alias dtt1="dt credencetab-v1-f"		# tab ~ fingerprint
+alias dtt2="dt credencetab-v2-fc"		# tab ~ fingerprint, nfc card
+alias dtt3="dt credencetab-v3-fm"		# tab ~ fingerprint, mrz
+alias dtt4="dt credencetab-v4-fcm"		# tab ~ fingerprint, nfc card, mrz
+
+alias dtt1="dt trident-1"				# trident ~ model 1
+alias dtt2="dt trident-2"				# trident ~ model 2
+alias dtt2r="dt Trident-2R"				# trident ~ model 2R
+alias dtt3="dt trident-3"				# (obsolete) legacy code (per Mark Evans)
+
+alias dttw="dt twizzler"				# aka BCAT
 
 # -----------------------------------------------------------------------------
 # 'find' is a powerful command that selects files and/or folders based upon a
