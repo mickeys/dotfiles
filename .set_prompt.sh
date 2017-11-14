@@ -1,6 +1,26 @@
 #!/usr/bin/env bash							# search PATH to get bash ~ portable
 #set -x
 
+prompt_color=''								# initialize
+
+u_x=$'\342\234\227'							# unicode '✗'
+u_cmark=$'\342\234\223'						# unicode '✓'
+u_ellipsis=$'\u2026'						# unicode '…'
+#u_gt=$'\u27E9'								# unicode '⟩'
+
+export GIT_PS1_SHOWDIRTYSTATE=1				# show unstaged '*' & staged '+' changes
+export GIT_PS1_SHOWCOLORHINTS=1				# show color if nonempty value
+export GIT_PS1_SHOWUNTRACKEDFILES=1			# show untracked '%'
+export GIT_PS1_SHOWUPSTREAM="auto"			# '<' behind '>' ahead '<>' diverged '=' no difference
+export GIT_PS1_HIDE_IF_PWD_IGNORED=1		# do nothing if cwd ignored by git
+
+if ((BASH_VERSINFO[0] < 4)); then echo "Error: bash 4.0 or later needed; quitting." >&2; exit 1; fi
+# shellcheck disable=SC2034
+declare -A COLORS=( [BLACK]=0 [RED]=1 [GREEN]=2 [YELLOW]=3 [PURPLE]=4 [PINK]=5 [BLUE]=6 [GREY]=7 )
+# get at the COLORS array by: ${COLORS[YELLOW]}
+BOLD="\[$(tput bold)\]"
+BOLDOFF="\[$(tput sgr0)\]"
+
 # =============================================================================
 # Configure bash's command prompt to display useful information *and* to be in
 # color.
@@ -10,17 +30,35 @@
 dir="${BASH_SOURCE%/*}"						# pointer to this script's location
 if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if not exist use current PWD
 . "$dir/.set_colors.sh"						# we refer to colors below...
-setTermColors
-showColors() {
-#			export BOLD='\[\033[1m\]'
-#			export BOLDOFF='\[\033[0m\]'
-			#
-			echo "FOO $NONE NONE $WHITE WHITE $BLACK BLACK $BLUE BLUE $LIGHT_BLUE LIGHT_BLUE $GREEN GREEN $LIGHT_GREEN LIGHT_GREEN $CYAN CYAN $LIGHT_CYAN LIGHT_CYAN $RED RED $LIGHT_RED LIGHT_RED $PURPLE PURPLE $LIGHT_PURPLE LIGHT_PURPLE $BROWN BROWN $YELLOW YELLOW $GRAY GRAY $LIGHT_GRAY LIGHT_GRAY "
+setTermColors								# actually set the colors
+
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+showColors() {								# for debugging
+	echo "FOO $NONE NONE $WHITE WHITE $BLACK BLACK $BLUE BLUE $LIGHT_BLUE LIGHT_BLUE $GREEN GREEN $LIGHT_GREEN LIGHT_GREEN $CYAN CYAN $LIGHT_CYAN LIGHT_CYAN $RED RED $LIGHT_RED LIGHT_RED $PURPLE PURPLE $LIGHT_PURPLE LIGHT_PURPLE $BROWN BROWN $YELLOW YELLOW $GRAY GRAY $LIGHT_GRAY LIGHT_GRAY "
+}
+
+# -----------------------------------------------------------------------------
+# make color-space color escape codes given fg|bg and a color value
+# -----------------------------------------------------------------------------
+c8() {
+	if [[ ${#@} -ne 2 ]] ; then
+	echo "got $@"
+		echo "usage: $0 fg|bg color_code" ; exit
+	elif [ "$1" == "bg" ] ; then mode='b' ; else mode='f' ; fi
+	echo "\[$(tput set${mode} ${2} )\]"
+}
+
+
+c256() {									# usage c256 fg|bg #
+	if [[ ${#@} -ne 2 ]] ; then
+		echo "usage: $0 fg|bg color_code" ; exit
+	elif [ "$1" == "bg" ] ; then mode='48' ; else mode='38' ; fi
+
+	echo "\[\e[${mode};5;${2}m\]"			# nicely-bracketed escape code
 }
 
 setTermPrompt() {
-#	if [ $( tput colors ) != "" ]; then echo "terminal" ; else echo "not terminal" ; fi
-
 	if [ $( tput colors ) != "" ]; then		# set colors if capable
 		ncolors=$(tput colors)				# ok terminal; does it do color?
 		if test -n "$ncolors" && test $ncolors -ge 8; then
@@ -31,7 +69,7 @@ setTermPrompt() {
 			#
 			# Add a FQDN or regex into the arrays, orange or red.
 			# =================================================================
-			hostColor="${GREEN}"			# default color
+			hostColor="$(c8 fg ${COLORS[GREEN]})"	# default color
 			# staging & web-hosting machines; mid-level importance
 			oranges=( 'stormdev' 'icpu2302' )
 			# production machines; high-level importance
@@ -41,61 +79,81 @@ setTermPrompt() {
 			do
 				if [[ $HOSTNAME =~ $fqdn ]]; then
 					echo "orange $fqdn"
-					hostColor="${YELLOW}"	# 16 colors no orange :-/
+					hostColor="$(c8 fg ${COLORS[YELLOW]})"	# 16 colors no orange :-/
 				fi
 			done
 
 			for fqdn in "${reds[@]}"		# check for red machines
 			do
 				if [[ $HOSTNAME =~ $fqdn ]]; then
-					hostColor="${RED}"
+					hostColor="$(c8 fg ${COLORS[RED]})"
 				fi
 			done
 
-			# =================================================================
-			# Keep terminal prompt settings here and refactor for custom prompts
-			# based upon location or hostname...
-			#
-			# So far this prompt pleases me globally.
-			#
-			# Change the terminal prompt to show current machine, command
-			# number, and the user level (root = '#', normal = '$').
-			# =================================================================
-			# Turn the prompt symbol red if the user is root
-			if [ $(id -u) -eq 0 ];
-			then # you are root, make the prompt red
-				#PS1="[\e[01;34m\u @ \h\e[00m]----[\e[01;34m$(pwd)\e[00m]\n\e[01;31m#\e[00m "
-				_prmt="\[${RED}\] #"
-			else
-				#PS1="[\e[01;34m\u @ \h\e[00m]----[\e[01;34m$(pwd)\e[00m]\n$ "
-				_prmt="\[${GREEN}\] %"
+			local last_cmd=$?				# result of the last command run
+
+			# colors for each component, from the 256 color set
+			BG1='241' ; BG2='239' ; BG3='236' ; BG4='232' ; BG5='0'
+			BG1_2='240' ; BG2_3='238' ; BG3_4='234'
+			FG1='231'
+			PS1=""							# start with an empty prompt string
+
+			PS1+="$( c256 bg "$BG2" ) "		# lay down a background color
+
+			# -------------------------------------------------------------------------
+			# show a red '✗' or a green '✓' and previous command return code.
+			# -------------------------------------------------------------------------
+			if [[ $last_cmd == 0 ]]; then	# if return code shows success...
+				PS1+="$(c8 fg ${COLORS[GREEN]})"
+				PS1+="$u_cmark"				# display a green '✓'...
+			else							# otherwise...
+				PS1+="$(c8 ${COLORS[RED]})"
+				PS1+="$u_x $last_cmd"		# display a red '✗'
 			fi
-##			export PS1="${BOLD}${hostColor}\H ${BOLDOFF}${YELLOW}\! ${hostColor}\W ${NONE}\$ "
-##			export PS1="${BOLD}${hostColor}${HOSTNAME%%.*} ${BOLDOFF}${YELLOW}\! ${hostColor}\W ${NONE}\$ "
-##			export PS1="${BOLD}${hostColor}${HOSTNAME%%.*} ${BOLDOFF}${BROWN}\! ${PURPLE}\w ${YELLOW}\$${NONE} "
-#			_time="${YELLOW}\A"
-#			_hist="${BLUE}\!"
-#			_host="${hostColor}${HOSTNAME%%.*}" # ${BOLD}${BOLDOFF}
-#			_path="${CYAN}\w"
-##			_shel="${YELLOW}\$$"
-##			export PS1="${_host} ${_numb} ${_dir_} ${_shel} ${NONE} "
-##			export PS1="${YELLOW}\A ${CYAN}\! ${GREEN}\h ${LIGHT_GRAY}\w ${WHITE}% ${NONE}"
-#			export PS1="${_time} ${_hist} ${_host} ${_path}${_prmt} ${NONE}"
 
-if ((BASH_VERSINFO[0] < 4)); then echo "Error: bash 4.0 or later needed; quitting." >&2; exit 1; fi
-# shellcheck disable=SC2034
-declare -A COLORS=( [BLACK]=0 [RED]=1 [GREEN]=2 [YELLOW]=3 [PURPLE]=4 [PINK]=5 [BLUE]=6 [GREY]=7 )
-			export BOLD="\[$(tput bold)\]"
-			export BOLDOFF="\[$(tput sgr0)\]"
+			PS1+="$( c256 bg "$BG1_2" ) "	# interim color
 
-			_time="\[$(tput setaf ${COLORS[YELLOW]})\]\A"
-			_hist="\[$(tput setaf ${COLORS[PINK]})\]\!"
-			_host="\[]${hostColor}${HOSTNAME%%.*}\]" # ${BOLD}\w${BOLDOFF}
-			_path="\[$(tput setaf ${COLORS[PURPLE]})\]\w"
+			# -------------------------------------------------------------------------
+			PS1+="$( c256 bg "$BG1" ) \A"	# time stamp
+			PS1+="$( c256 bg "$BG1_2" ) "	# interim color
+			PS1+="$( c256 bg "$BG2" ) \!"	# history number
+			PS1+="$( c256 bg "$BG2_3" ) "	# interim color
+			if [ "${HOSTNAME%%.*}" != "michael" ] ; # don't show hostname on my usual box
+			then
+				PS1+="$( c256 bg "$BG3" ) $(c8 fg ${hostColor})${HOSTNAME%%.*}" # hostname
+			fi
+			PS1+="$( c256 bg "$BG3_4" ) "	# interim color
 
-			export PS1="${_time} ${_hist} ${_host} ${_path}${_prmt}\[${BOLDOFF}\] "
+			# -------------------------------------------------------------------------
+			# current working directory
+			# -------------------------------------------------------------------------
+			local -r depth=3				# show the last n dirs deep
+			local mypath="$u_ellipsis/"		# start truncated path with '…'
+			local sep='/'					# separate path with this '/'
+
+			IFS=/ read -a p <<< "$PWD"
+			lp=${#p[@]}						# pwd is n directories deep
+			if [[ $lp > $depth ]] ; then	# do we need to truncate?
+				for (( i=$((lp-depth)); i<lp; i++ )); do mypath+="${p[$i]}$sep" ; done
+			else
+				mypath="$PWD"				# not deep; show full path
+			fi
+
+			# -------------------------------------------------------------------------
+			PS1+="$(c8 fg ${COLORS[GREEN]})"
+			PS1+=" $mypath"					# current path (was \w)
+
+			# -------------------------------------------------------------------------
+			# Run $PROMPT_COMMAND each time before displaying the prompt.
+			# -------------------------------------------------------------------------
+#			export PROMPT_COMMAND='export _branch=$( __git_ps1 "[%s]" )'
+			export PROMPT_COMMAND='setTermPrompt'
+			_branch=$( __git_ps1 "[%s]" )
+			PS1+=" ${_branch} ▶\[${BOLDOFF}\] ${_prmt} "
+			export PS1
 
 		fi # end of if-terminal-supports-color
 	fi # end of if-terminal
-set +x
 } # end setTermPrompt
+
+#PROMPT_COMMAND='setTermPrompt'				# run this to generate the prompt
