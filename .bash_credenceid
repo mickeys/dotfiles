@@ -223,8 +223,9 @@ alias gh='git log --follow '			# git history for a file
 alias gi='git check-ignore -v *'		# see what's being ignored
 #alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
 alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
-alias gs='git status --short'			# see what's going on
+alias go='git remote show origin'
 alias gp='git push -u origin master'	# send changes upstream
+alias gs='git status --short'			# see what's going on
 
 alias gsl='git stash list'				# git-stash(1)
 alias gsp='git stash pop'				# git-stash(1)
