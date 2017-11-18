@@ -16,7 +16,9 @@ I've commented as heavily as possible, used some interesting bash techniques to 
 
 Comments and corrections are always welcome.
 
-M
+Michael
+
+<img src="./images/playa-pink-and-blue-hair.jpg" border="1">
 
 ## the tools
 
