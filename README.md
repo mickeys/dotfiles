@@ -16,7 +16,18 @@ I've commented as heavily as possible, used some interesting bash techniques to 
 
 Comments and corrections are always welcome.
 
+<hr>
+
+For a thoughtful, hard-core look at dotfile management, visit <http://dotfiles.github.io>.
+
+À Propos nothing at all, a note about the tools I've used to generate these README files on github:
+
+* on-line:  [dillinger.io](http://dillinger.io/) is a WYSIWYG side-by-side Markdown editor
+* off-line: on my Mac I use [MacDown](https://macdown.uranusjr.com/) for the same functionality. I especially like ability to toggle CSS formatting files to use Markdown for other documentation purposes.
+
+<hr>
 <br clear="right"></a>
+<center><b>T H E&nbsp;&nbsp;&nbsp;&nbsp;F I L E S</b></center>
 
 | filename        | purpose |
 | ------------- |------------- |
@@ -32,7 +43,3 @@ Comments and corrections are always welcome.
 | .vimrc | Configure the `vim` text editor to be borderline awesome. |
 | bin | My home-grown binaries (programs)
 | README.md	| This very file. |
-
-For a hard-core look at dotfile management, visit <http://dotfiles.github.io>.
-
-A shout-out to  [dillinger.io](http://dillinger.io/), the most amazing, free, online GFM editor (which was used to edit and preview the very text you're reading.
