@@ -6,7 +6,7 @@ prompt_color=''								# initialize
 u_x=$'\342\234\227'							# unicode '✗'
 u_cmark=$'\342\234\223'						# unicode '✓'
 u_ellipsis=$'\u2026'						# unicode '…'
-#u_gt=$'\u27E9'								# unicode '⟩'
+u_gt=$'\u27E9'								# unicode '⟩'
 
 export GIT_PS1_SHOWDIRTYSTATE=1				# show unstaged '*' & staged '+' changes
 export GIT_PS1_SHOWCOLORHINTS=1				# show color if nonempty value
@@ -93,27 +93,49 @@ setTermPrompt() {
 			local last_cmd=$?				# result of the last command run
 
 			# colors for each component, from the 256 color set
+			# darkest (higher number) to lightest (lower number) in palette
+			# https://jonasjacek.github.io/colors/
 			BG1='241' ; BG2='239' ; BG3='236' ; BG4='232' ; BG5='0'
-			BG1_2='240' ; BG2_3='238' ; BG3_4='234'
+			BG1_2='240' ; BG2_3='238' ; BG3_4='238'
 			FG1='231'
+
+
+			BG1='248' ; BG2='246' ; BG3='244' ; BG4='242' ; BG5='240'
+			BG1_2='247' ; BG2_3='245' ; BG3_4='243'
+
+			BG1='250' ; BG2='248' ; BG3='246' ; BG4='244' ; BG5='242'
+			BG1_2='249' ; BG2_3='247' ; BG3_4='245'
+
+#_t_="$( c256 bg "$BG1" ) BG1"
+#echo -e "$( c256 bg "$BG1" )$( c256 fg "232" ) this is a test ${BOLD}another test${BOLDOFF}"
+
+
+
 			PS1=""							# start with an empty prompt string
 
-			PS1+="$( c256 bg "$BG2" ) "		# lay down a background color
+			PS1+="$( c256 bg "$BG3" ) "		# lay down a background color
 
 			# -------------------------------------------------------------------------
 			# show a red '✗' or a green '✓' and previous command return code.
 			# -------------------------------------------------------------------------
 			if [[ $last_cmd == 0 ]]; then	# if return code shows success...
-				PS1+="$(c8 fg ${COLORS[GREEN]})"
+#				PS1+="$(c8 fg ${COLORS[GREEN]})"
+				PS1+="${BOLD}$( c256 fg "46" )" # Green1
+				PS1+="${BOLD}"
 				PS1+="$u_cmark"				# display a green '✓'...
+				PS1+="${BOLDOFF}"
 			else							# otherwise...
-				PS1+="$(c8 ${COLORS[RED]})"
+#				PS1+="$(c8 ${COLORS[RED]})"
+				PS1+="${BOLD}$( c256 fg "196" )" # Red1
+				PS1+="${BOLD}"
 				PS1+="$u_x $last_cmd"		# display a red '✗'
+				PS1+="${BOLDOFF}"
 			fi
 
 			PS1+="$( c256 bg "$BG1_2" ) "	# interim color
 
 			# -------------------------------------------------------------------------
+			PS1+="${BOLD}$( c256 fg "232" )"
 			PS1+="$( c256 bg "$BG1" ) \A"	# time stamp
 			PS1+="$( c256 bg "$BG1_2" ) "	# interim color
 			PS1+="$( c256 bg "$BG2" ) \!"	# history number
@@ -130,6 +152,7 @@ setTermPrompt() {
 			local -r depth=3				# show the last n dirs deep
 			local mypath="$u_ellipsis/"		# start truncated path with '…'
 			local sep='/'					# separate path with this '/'
+#			local sep="$( c256 fg "$BG1" )$u_gt$( c256 fg "232" )"
 
 			IFS=/ read -a p <<< "$PWD"
 			lp=${#p[@]}						# pwd is n directories deep
@@ -149,7 +172,9 @@ setTermPrompt() {
 #			export PROMPT_COMMAND='export _branch=$( __git_ps1 "[%s]" )'
 			export PROMPT_COMMAND='setTermPrompt'
 			_branch=$( __git_ps1 "[%s]" )
-			PS1+=" ${_branch} ▶\[${BOLDOFF}\] ${_prmt} "
+			PS1+=" ${_branch} "
+			PS1+="$( c256 bg "$BG1" )$( c256 fg "$BG5" )"
+			PS1+="▶\[${BOLDOFF}\] ${_prmt} "
 			export PS1
 
 		fi # end of if-terminal-supports-color
