@@ -1,5 +1,6 @@
 # dotfiles
 
+<a href="https://xkcd.com/1692/"><img src="./images/xkcd_1692.png" width="40%" align="right"></a>
 My UN*X dotfiles and other configuration files.
 
 Feel free to peruse these, and even to use them as a start for your own use. I have stood on the shoulders of giants (and, besides, it's turtles all the way down).
@@ -9,6 +10,8 @@ Each the files in this repo have been added because I want to
 2. share with others those things over the years I've found useful, productive, and fun.
 
 What you read here is not a complete list, but rather some highlights targeted to new command-line users.
+
+<br clear="right"></a>
 
 | filename        | purpose |
 | ------------- |------------- |
