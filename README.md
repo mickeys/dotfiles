@@ -3,13 +3,18 @@
 <a href="https://xkcd.com/1692/"><img src="./images/xkcd_1692.png" width="40%" align="right"></a>
 My UN*X dotfiles and other configuration files.
 
-Feel free to peruse these, and even to use them as a start for your own use. I have stood on the shoulders of giants (and, besides, it's turtles all the way down).
+These will work on most *NIX environments; they' started back on 1980s UNIX distributions and have followed me to macOS. Some of these files are in use on the <a href="https://msdn.microsoft.com/en-us/commandline/wsl/about">Windows Subsystem for Linux</a>, so there's that.
 
-Each the files in this repo have been added because I want to
+Feel free to peruse these, and even to use them as a start for your own use. I have stood on the <a href="https://stackoverflow.com/">shoulders of giants</a>, although all mistakes are my own (and,, besides, <a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">it's turtles all the way down</a>, so now it's your turn to bulid for those who follow).
+
+Each the files in this repo has been added because I want to:
+
 1. have easy access for deployment on new UN*X machines I wind up working on, including my go-to platform, macOS [Darwin].
 2. share with others those things over the years I've found useful, productive, and fun.
 
-What you read here is not a complete list, but rather some highlights targeted to new command-line users.
+I've commented as heavily as possible, used some interesting bash techniques to get things done, and generally tried to stay out of the way of my future self whilst making it possible to go back and tweak and add features without cursing my past stelf too much :-) 
+
+Comments and corrections are always welcome.
 
 <br clear="right"></a>
 
