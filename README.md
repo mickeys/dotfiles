@@ -16,7 +16,9 @@ I've commented as heavily as possible, used some interesting bash techniques to 
 
 Comments and corrections are always welcome.
 
-<hr>
+M
+
+## the tools
 
 For a thoughtful, hard-core look at dotfile management, visit <http://dotfiles.github.io>.
 
@@ -25,9 +27,9 @@ For a thoughtful, hard-core look at dotfile management, visit <http://dotfiles.g
 * on-line:  [dillinger.io](http://dillinger.io/) is a WYSIWYG side-by-side Markdown editor
 * off-line: on my Mac I use [MacDown](https://macdown.uranusjr.com/) for the same functionality. I especially like ability to toggle CSS formatting files to use Markdown for other documentation purposes.
 
-<hr>
 <br clear="right"></a>
-<center><b>T H E&nbsp;&nbsp;&nbsp;&nbsp;F I L E S</b></center>
+
+## the files
 
 | filename        | purpose |
 | ------------- |------------- |
