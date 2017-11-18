@@ -9,10 +9,10 @@ Feel free to peruse these, and even to use them as a start for your own use. I h
 
 Each the files in this repo has been added because I want to:
 
-1. have easy access for deployment on new UN*X machines I wind up working on, including my go-to platform, macOS [Darwin].
+1. have easy access for deployment on new UN*X machines I wind up working on, including my go-to platform, macOS [<a href="https://en.wikipedia.org/wiki/Darwin_%28operating_system%29">Darwin</a>].
 2. share with others those things over the years I've found useful, productive, and fun.
 
-I've commented as heavily as possible, used some interesting bash techniques to get things done, and generally tried to stay out of the way of my future self whilst making it possible to go back and tweak and add features without cursing my past stelf too much :-) 
+I've commented as heavily as possible, used some interesting bash techniques to get things done, and generally tried to <a href="https://xkcd.com/844/">stay out of the way of my future self</a> whilst making it possible to go back and tweak and add features without cursing my past stelf too much :-) 
 
 Comments and corrections are always welcome.
 
