@@ -45,3 +45,5 @@ For a thoughtful, hard-core look at dotfile management, visit <http://dotfiles.g
 | .vimrc | Configure the `vim` text editor to be borderline awesome. |
 | bin | My home-grown binaries (programs)
 | README.md	| This very file. |
+
+It's possible that the real world has gotten ahead of my documentation; you may files checked in that aren't mentioned here. Sorry.
