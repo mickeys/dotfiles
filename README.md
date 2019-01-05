@@ -7,6 +7,10 @@ These will work on most *NIX environments; they' started back on 1980s UNIX dist
 
 Feel free to peruse these, and even to use them as a start for your own use. I have stood on the <a href="https://stackoverflow.com/">shoulders of giants</a>, although all mistakes are my own (and,, besides, <a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">it's turtles all the way down</a>, so now it's your turn to bulid for those who follow).
 
+Symlink each of these into your home directory by
+
+`for d in ~/dotfiles/.[a-z]* ; do ln -sv $d ~ ; done`
+
 Each the files in this repo has been added because I want to:
 
 1. have easy access for deployment on new UN*X machines I wind up working on, including my go-to platform, macOS [<a href="https://en.wikipedia.org/wiki/Darwin_%28operating_system%29">Darwin</a>].
