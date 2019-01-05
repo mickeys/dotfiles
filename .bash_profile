@@ -239,6 +239,12 @@ getDomainnames() {
 
 		#external_ip="$( dig +short myip.opendns.com @resolver1.opendns.com )"
 		debug "host -t txt $lookup $dns"
+
+		if grep --version | grep "BSD" > /dev/null ; then
+			echo "error: GNU grep required. Install with the command:"
+			echo "brew install grep --with-default-names"
+		fi
+
 		external_ip=$( host -t txt "$target" "$dns" | grep -oP "client-subnet \K(\d{1,3}\.){3}\d{1,3}" )
 		if [[ ${#external_ip} -eq 0 ]] ; then
 			debug "external_ip is empty, giving up..."
@@ -601,12 +607,20 @@ EOT
 
 			# -----------------------------------------------------------------
 			# iPhone simulator is hidden for some strange reason
+			# -----------------------------------------------------------------
 			#alias simu='open /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone\ Simulator.app'
 
-			# enable git completion
-			# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
-			source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
-			source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
+			# -----------------------------------------------------------------
+			# enable bash git completion
+			# requires: # brew install git bash-completion
+			# -----------------------------------------------------------------
+			if brew ls --versions bash-completion > /dev/null; then
+				# The package is installed
+				# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
+				source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
+				source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
+			fi
+
 		    export BLOCKSIZE=1k				# default blocksize for ls, df, du
 
 			;;	# end darwin
@@ -941,10 +955,10 @@ serial() {
 alias mys='mysql --host=127.0.0.1 --port=65001 -u root -p --execute="show databases;"'
 
 # -----------------------------------------------------------------------------
-# Credence ID
+# CID
 # -----------------------------------------------------------------------------
-# shellcheck source=/Users/michael/.bash_credenceid
-source ~/.bash_credenceid				# use a common .bashrc file
+# shellcheck source=/Users/michael/.bash_cid
+#source ~/.bash_cid						# use a common .bashrc file
 
 alias getkenny='scp build:/home/kcrudup/src/t2r-test-repo/out/target/product/trident_2r/*.{img,zip} .'
 #alias foo="x=\"$2\" ; echo \"$x thing_\${x}.png\""
@@ -954,11 +968,22 @@ alias uu="fastboot \$TARGET oem unlock B73AC261"
 alias wbackup='wget --user brittonholland --password Credence#1 -r ftp://ftp.credenceid.com/'
 alias fw='ftp ftp://brittonholland:Credence#1@ftp.credenceid.com'
 
+# -----------------------------------------------------------------------------
+# Android
+# -----------------------------------------------------------------------------
 # shellcheck source="${HOME}/"
 export ANDROID_HOME=~/Library/Android/sdk
 export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
-export JAVA_HOME						# SC2155: Declare and assign separately
-JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+
+# -----------------------------------------------------------------------------
+# Java
+# -----------------------------------------------------------------------------
+if [[ -n $(type -p java) ]] ; then
+	echo > /dev/null						# no-op if Java missing; add text if required
+else
+	export JAVA_HOME						# SC2155: Declare and assign separately
+	JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+fi
 
 # --- my shortcuts to CID working directories ---
 CREDENCEID="$HOME/Documents/cid"
@@ -1026,7 +1051,13 @@ fi
 # -----------------------------------------------------------------------------
 # Manage $PATH and $MANPATH.
 # -----------------------------------------------------------------------------
-PATH="$(brew --prefix homebrew/php/php70)/bin:$PATH" # PHP 7.x
+
+if brew ls --versions php > /dev/null; then
+	# The package is installed
+	PATH="$( brew --prefix homebrew/php/h )/bin:$PATH" # PHP 7.x
+fi
+
+# TO-DO add installation tests around each of the following optional add-ons
 PATH="/usr/local/opt/python/libexec/bin:$PATH"	# homebrew python
 MANPATH="/usr/local/opt/coreutils/libexec/gnuman:$MANPATH"	# GNU
 PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"		# GNU
@@ -1049,15 +1080,17 @@ if [[ -d "$PY_BIN" ]] ; then PATH="$PATH:$PY_BIN" ; fi	# double-check
 #
 # FYI: configs in ${HOME}/.config/powerline/themes/shell/
 # -----------------------------------------------------------------------------
-#POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
-POWERLINE_PATH=$( pip show powerline-status | grep Location | cut -d " " -f 2 )
-if [[ "$POWERLINE_PATH" != "" && -e "${POWERLINE_PATH}/bindings/bash/powerline.sh" ]]; then
-	PATH="$PATH:$POWERLINE_PATH/../scripts"	#
-	powerline-daemon -q						#
-	export POWERLINE_BASH_CONTINUATION=1	#
-	export POWERLINE_BASH_SELECT=1			#
-	# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
-	source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
+if /usr/bin/which pip > /dev/null; then
+	#POWERLINE_PATH=$( /usr/bin/python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null )
+	POWERLINE_PATH=$( pip show powerline-status | grep Location | cut -d " " -f 2 )
+	if [[ "$POWERLINE_PATH" != "" && -e "${POWERLINE_PATH}/bindings/bash/powerline.sh" ]]; then
+		PATH="$PATH:$POWERLINE_PATH/../scripts"	#
+		powerline-daemon -q						#
+		export POWERLINE_BASH_CONTINUATION=1	#
+		export POWERLINE_BASH_SELECT=1			#
+		# shellcheck source=/Users/michael/Library/Python/2.7/lib/python/site-packages/powerline/bindings/bash/powerline.sh
+		source "${POWERLINE_PATH}/bindings/bash/powerline.sh"
+	fi
 else
 	dir="${BASH_SOURCE%/*}"					# point to this script's location
 	if [[ ! -d "$dir" ]]; then dir="$PWD"; fi	# if doesn't exist use PWD
