@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+# +-------------+--------------------------------------------------------------
+# | filename	| .bash-ck (symlink by: ln -s .bash-ck .bash_profile)
+# | version		| tracked at https://github.com/mickeys/dotfiles/.bash-ck
+# | purpose		| single bash run-commands file for CK local & vagrant hosts
+# +-------------+--------------------------------------------------------------
+
+#set -x										# toggle debugging verbosity
+# github.com/koalaman/shellcheck is used to bomb-proof this (and other) scripts
+# shellcheck disable=1090,1091				# tell shellcheck source script URLs
+set -u o pipefail							# unofficial bash strict mode
+
+# =============================================================================
+# Aliases, alphabetically
+# =============================================================================
+export BLOCKSIZE=1k							# default blocksize for ls, df, du
+alias c='clear'								# clear terminal screen
+alias d="printf \"\033[31;1;31m%0.s*\033[0m\" {1..111}" # easy-to-see red line
+alias df='df -h'							# show human-readable sizes
+alias ll='gls -lAhF'						# ls w kb, mb, gb
+alias lr='gls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
+alias ls='gls -FG --time-style=iso'
+alias h='history'							# bash command history
+alias pd='pushd'							# manipulate directory stack
+
+# =============================================================================
+# Enhance terminal commands with color.
+# =============================================================================
+export CLICOLOR=1							# make ls colorful
+export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# was 'Bxgxfxfxcxdxdxhbadbxbx'
+export TERM=xterm-color						# use color-capable termcap
+
+# =============================================================================
+# Determine whether you're on a local or remote (vagrant) instance.
+# =============================================================================
+if [[ $HOSTNAME == ip- ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
+
+	#.,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``#
+	#																		  #
+	#		Vagrant (remote) host environment configuration section.		  #
+	#																		  #
+	#``°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸#
+	
+	# -------------------------------------------------------------------------
+	# Set the terminal prompt.
+	# -------------------------------------------------------------------------
+	__h=${HOSTNAME#*-}						# preserve everything after first '-'
+	__g=${__h//-/.}							# substitute '-' with '.'
+	# shellcheck disable=SC2154,SC2155		# ignore well-established convention
+	export PS1="\[\033[38;5;248m\](${timer_show}s) \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;1m\]${__g}\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]\[\033[38;5;248m\]\W\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;1m\]\\$\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+
+else
+
+	#.,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``#
+	#																		  #
+	#		Local (laptop) host environment configuration section.			  #
+	#																		  #
+	#``°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸#
+
+	# -------------------------------------------------------------------------
+	# Homebrew macOS package manager (brew.sh)
+	# -------------------------------------------------------------------------
+	if command -v brew > /dev/null ; then	# if homebrew is installed
+		alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
+		alias brew_installed='brew leaves'	# top-level installed packages
+		alias brew_versions='brew list --versions'
+	fi
+
+	# -------------------------------------------------------------------------
+	# MySQL (via homebrew)
+	# -------------------------------------------------------------------------
+	export _MYSQL='/usr/local/opt/mysql@5.6/'
+	if [ -e "$_MYSQL" ] ; then
+		export PATH="${_MYSQL}/bin:$PATH"	# find executables
+		export LDFLAGS="-L${_MYSQL}/lib"	# for compilers
+		export CPPFLAGS="-I${_MYSQL}/include"
+
+		alias mysql='mysql -uroot'	# connect
+		alias mysql_start='${_MYSQL}/bin/mysql.server start' # start manually
+		# brew services start mysql@5.6		# start automatically
+	fi
+
+	# -------------------------------------------------------------------------
+	# OpenSSL (via homebrew)
+	#
+	# A CA file has been bootstrapped using certificates from the SystemRoots
+	# keychain. To add additional certificates (e.g. the certificates added in
+	# the System keychain), place .pem files in /usr/local/etc/openssl/certs and
+	# run openssl_rehash.
+	# -------------------------------------------------------------------------
+	export _OPENSSL="/usr/local/opt/openssl"
+	if [ -e "$_OPENSSL" ] ; then
+		export PATH="${_OPENSSL}/bin:$PATH"	# find executables
+		export LDFLAGS="-L${_OPENSSL}/lib"	# for compilers
+		export CPPFLAGS="-I${_OPENSSL}/include"
+
+		alias openssl_rehash='${_OPENSSL}/bin/c_rehash'
+	fi
+
+	# -------------------------------------------------------------------------
+	# gpg2 (via homebrew) used by rvm (Ruby version manager)
+	# -------------------------------------------------------------------------
+	if command -v gpg2 > /dev/null ; then	# if package is installed
+		export LDFLAGS="-L/usr/local/opt/libffi/lib"	# for compilers
+		export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" # for pkg-config
+	fi
+
+	# =========================================================================
+	# Bash-completion (via homebrew) presents options to the user when the Tab
+	# key is pressed. Read github.com/bobthecow/git-flow-completion
+	# =========================================================================
+	if brew ls --versions bash-completion > /dev/null; then
+		# The package is installed.
+		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
+		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
+		source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
+	fi
+
+	# -------------------------------------------------------------------------
+	# Set the terminal prompt.
+	# -------------------------------------------------------------------------
+	# shellcheck disable=SC2155				# ignore well-established convention
+	export PS1="\[\033[38;5;248m\]\W\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;2m\]\\$\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+
+	# -------------------------------------------------------------------------
+	# Set other aliases.
+	# -------------------------------------------------------------------------
+	cpbash() {
+		if [ -z "$1" ] ; then				# explain proper usage if no host
+			echo "usage: ${FUNCNAME[0]} UserName@RemoteHost:"
+		else
+			scp ~/.bash-profile "$1"		# copy this file to the remote host
+		fi
+	}
+	tit() { echo -ne "\033]0;${*}\007" ; }	# iTerm -- set tab name
+
+	# -------------------------------------------------------------------------
+	# Remove duplicate $PATH entries.
+	# -------------------------------------------------------------------------
+	cleanPath() {
+		if [ -n "$PATH" ]; then				# if the system PATH exists
+		  oldPath=$PATH:; newPath=			# make a copy & new working space
+		  while [ -n "$oldPath" ]; do		# while there's still something left
+			x=${oldPath%%:*}				# get the first remaining entry
+			case $newPath: in
+			  *:"$x":*) ;;					# already there, do nothing
+			  *) newPath=$newPath:$x;;    	# not there yet; add
+			esac
+			oldPath=${oldPath#*:}
+		  done
+		  PATH=${newPath#:}					# set system PATH to uniq'd version
+		  unset oldPath newPath x			# clean up after ourselves
+		fi
+	}
+
+	cleanPath								# remove duplicates from PATH
+	export PATH								# share and enjoy!
+fi
