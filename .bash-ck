@@ -2,7 +2,7 @@
 
 # +-------------+--------------------------------------------------------------
 # | filename	| .bash-ck (symlink by: ln -s .bash-ck .bash_profile)
-# | version		| tracked at https://github.com/mickeys/dotfiles/.bash-ck
+# | version		| tracked at https://github.com/mickeys/dotfiles
 # | purpose		| single bash run-commands file for CK local & vagrant hosts
 # +-------------+--------------------------------------------------------------
 
@@ -34,21 +34,48 @@ export TERM=xterm-color						# use color-capable termcap
 # =============================================================================
 # Determine whether you're on a local or remote (vagrant) instance.
 # =============================================================================
-if [[ $HOSTNAME == ip- ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
+if [[ $HOSTNAME == ip-* ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
 
 	#.,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``°º¤ø.¸,ø¤º°``#
 	#																		  #
 	#		Vagrant (remote) host environment configuration section.		  #
 	#																		  #
 	#``°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸#
-	
+
+	# -------------------------------------------------------------------------
+	# Show elapsed time of last shell command as part of the prompt string.
+	# -------------------------------------------------------------------------
+	function timer_start {
+		timer=${timer:-$SECONDS}
+	}
+
+	function timer_stop {
+		timer_show=$(($SECONDS - $timer))
+		unset timer
+	}
+
+	trap 'timer_start' DEBUG
+
+	if [ -n "${PROMPT_COMMAND:-}" ]; then
+		PROMPT_COMMAND="$PROMPT_COMMAND; timer_stop"
+	else
+		PROMPT_COMMAND="timer_stop"
+	fi
+
 	# -------------------------------------------------------------------------
 	# Set the terminal prompt.
 	# -------------------------------------------------------------------------
 	__h=${HOSTNAME#*-}						# preserve everything after first '-'
 	__g=${__h//-/.}							# substitute '-' with '.'
-	# shellcheck disable=SC2154,SC2155		# ignore well-established convention
-	export PS1="\[\033[38;5;248m\](${timer_show}s) \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;1m\]${__g}\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]\[\033[38;5;248m\]\W\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;1m\]\\$\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+
+	_TIMER='${timer_show}s'					# single-quotes important here!
+	_ELAPS="\[\033[38;5;248m\]$_TIMER$(tput bold)\]"
+	_HOST="\[\033[38;5;1m\]${__g}\[$(tput sgr0)\]"
+	_DIR="\[\033[38;5;248m\]\W\[$(tput sgr0)\]"
+	_BRANCH="\[\033[01;31m\]`git branch 2>/dev/null | cut -f2 -d\* -s`\[\033[01;32m\]"
+	_PROMPT="\[\033[38;5;2m\]\\$\[$(tput sgr0)\]"
+
+	export PS1="$_ELAPS $_HOST $_DIR $_PROMPT "
 
 else
 
@@ -57,6 +84,31 @@ else
 	#		Local (laptop) host environment configuration section.			  #
 	#																		  #
 	#``°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸¸,ø¤º°`°º¤ø,¸#
+
+	# -------------------------------------------------------------------------
+	# git version control system (git-scm.com)
+	#
+	# see also: http://nuclearsquid.com/writings/git-tricks-tips-workflows/
+	# and also: http://durdn.com/blog/2012/11/22/must-have-git-aliases-advanced-examples/
+	# -------------------------------------------------------------------------
+	alias g='git'							# save 66% of typing
+	complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
+	function ga() { git add "$1"\ ; }		# add files to be tracked
+	function gc() { git commit -m "$@" ; }	# commit changes locally
+	function keysx() { tr '[:upper:]' '[:lower:]' < "$1" | sort | uniq | wc -l ; }
+
+	alias gd='git diff'						# see what happened
+	alias gh='git log --follow '			# git history for a file
+	alias gi='git check-ignore -v *'		# see what's being ignored
+	#alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
+	alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
+	alias go='git remote show origin'
+	alias gp='git push -u origin master'	# send changes upstream
+	alias gs='git status'					# summarize; you may like --short
+
+	alias gsl='git stash list'				# git-stash(1)
+	alias gsp='git stash pop'				# git-stash(1)
+	alias gss='git stash save'				# git-stash(1)
 
 	# -------------------------------------------------------------------------
 	# Homebrew macOS package manager (brew.sh)
@@ -121,19 +173,88 @@ else
 	# Set the terminal prompt.
 	# -------------------------------------------------------------------------
 	# shellcheck disable=SC2155				# ignore well-established convention
-	export PS1="\[\033[38;5;248m\]\W\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput bold)\]\[$(tput sgr0)\]\[\033[38;5;2m\]\\$\[$(tput sgr0)\]\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+	_DIR="\[\033[38;5;248m\]\W\[$(tput sgr0)\]"
+	_BRANCH="\[\033[01;31m\]`git branch 2>/dev/null | cut -f2 -d\* -s`\[\033[01;32m\]"
+	_PROMPT="\[\033[38;5;2m\]\\$\[$(tput sgr0)\]"
+
+	export PS1="$_DIR $_BRANCH $_PROMPT "
 
 	# -------------------------------------------------------------------------
-	# Set other aliases.
+	# Solutions to developing locally (on a laptop) while testing on a remote
+	# (vagrant) instance. First pass of this covers working with one remote; if
+	# multiple remotes become common we'll tackle that situation next.
+	#
+	# 1 Spin up your remote (vagrant UAT).
+	# 2 Place the remote IP address into _REMO, below.
+	# 3 Generate proper commands with `source ~/.bash_profile`.
+	# 4 `cpk` for password-less secure shell (ssh, scp).
+	# 5 `cpb` to make the remote login shell behave as you've specified above.
+	# 6 `sshr` to connect; enjoy!
 	# -------------------------------------------------------------------------
 	cpbash() {
 		if [ -z "$1" ] ; then				# explain proper usage if no host
 			echo "usage: ${FUNCNAME[0]} UserName@RemoteHost:"
 		else
-			scp ~/.bash-profile "$1"		# copy this file to the remote host
+			echo scp -L -i "$_SSHK" "$HOME/.bash-profile" "$1" # copy this to remote
 		fi
 	}
+
+	export _REMO='172.30.30.215'			# your remote's IP addr
+	export _SSHK="$HOME/.ssh/github-ck"		# your local private SSH key
+	alias cpb="cpbash vagrant@\${_REMO}:"	# copy this bash file to remote
+	alias cpk="ssh-copy-id -i \${_SSHK} vagrant@\${_REMO}" # copy key; no passwd
+	alias sshr="ssh vagrant@\${_REMO}"		# -i ${_SSHK} unneeded
+
+	# -------------------------------------------------------------------------
+	# Copy local work to the remote in one fell swoop! Git commit at success!
+	# -------------------------------------------------------------------------
+	export _LOCAL_CHEDDAR="$HOME/git-repos/automation/cheddar"
+	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
+
+	alias cheddar="cd \$_LOCAL_CHEDDAR"		# mimic vagrant command
+
+	alias rch="rsync --dry-run --human-readable --progress \
+		-e \"ssh -i \$_SSHK\" \
+		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
+
+	# -------------------------------------------------------------------------
+	# Copy local work to the remote one file or folder at a time.
+	# -------------------------------------------------------------------------
+	touat () {
+		if [ -z "$1" ]; then
+			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP LocalFileName RemoteFilePath"
+		else
+			scp -i "$_SSHK" "$2" "vagrant@172.30.8.$1:$3"
+		fi
+	}
+
+	fromuat () {
+		if [ -z "$1" ]; then
+			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP RemoteFilePath LocalFileName"
+		else
+			scp -i "$_SSHK" "vagrant@172.30.8.$1:$2" "$3"
+		fi
+	}
+
+	# -------------------------------------------------------------------------
+	# Miscellany.
+	# -------------------------------------------------------------------------
 	tit() { echo -ne "\033]0;${*}\007" ; }	# iTerm -- set tab name
+	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
+
+	# -------------------------------------------------------------------------
+	# Cisco Umbrella roaming client - resetting to route around occasional issue
+	# -------------------------------------------------------------------------
+	ustart () {
+		sudo launchctl load /Library/LaunchDaemons/com.opendns.osx.RoamingClientConfigUpdater.plist;
+		launchctl load /Library/LaunchAgents/com.opendns.osx.RoamingClientMenubar.plist;
+	}
+
+	ustop () {
+		sudo launchctl remove com.opendns.osx.RoamingClientConfigUpdater;
+		launchctl remove com.opendns.osx.RoamingClientMenubar;
+		sudo killall OpenDNSDiagnostic &>/dev/null;
+	}
 
 	# -------------------------------------------------------------------------
 	# Remove duplicate $PATH entries.
