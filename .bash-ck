@@ -18,18 +18,17 @@ export BLOCKSIZE=1k							# default blocksize for ls, df, du
 alias c='clear'								# clear terminal screen
 alias d="printf \"\033[31;1;31m%0.s*\033[0m\" {1..111}" # easy-to-see red line
 alias df='df -h'							# show human-readable sizes
-alias ll='gls -lAhF'						# ls w kb, mb, gb
-alias lr='gls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
-alias ls='gls -FG --time-style=iso'
 alias h='history'							# bash command history
 alias pd='pushd'							# manipulate directory stack
 
 # =============================================================================
-# Enhance terminal commands with color.
+# Enhance terminal commands with color (if capable).
 # =============================================================================
-export CLICOLOR=1							# make ls colorful
-export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'	# was 'Bxgxfxfxcxdxdxhbadbxbx'
-export TERM=xterm-color						# use color-capable termcap
+if tput colors ne "-1" &> /dev/null ; then
+	export CLICOLOR=1						# make ls colorful
+	export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'
+	export TERM=xterm-color					# use color-capable termcap
+fi
 
 # =============================================================================
 # Determine whether you're on a local or remote (vagrant) instance.
@@ -50,7 +49,7 @@ if [[ $HOSTNAME == ip-* ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
 	}
 
 	function timer_stop {
-		timer_show=$(($SECONDS - $timer))
+		export timer_show=$((SECONDS - timer))
 		unset timer
 	}
 
@@ -68,11 +67,12 @@ if [[ $HOSTNAME == ip-* ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
 	__h=${HOSTNAME#*-}						# preserve everything after first '-'
 	__g=${__h//-/.}							# substitute '-' with '.'
 
+	# shellcheck disable=SC2016				# we really need the variable name
 	_TIMER='${timer_show}s'					# single-quotes important here!
 	_ELAPS="\[\033[38;5;248m\]$_TIMER$(tput bold)\]"
 	_HOST="\[\033[38;5;1m\]${__g}\[$(tput sgr0)\]"
 	_DIR="\[\033[38;5;248m\]\W\[$(tput sgr0)\]"
-	_BRANCH="\[\033[01;31m\]`git branch 2>/dev/null | cut -f2 -d\* -s`\[\033[01;32m\]"
+	_BRANCH="\[\033[01;31m\]$(git branch 2>/dev/null | cut -f2 -d\* -s)\[\033[01;32m\]"
 	_PROMPT="\[\033[38;5;2m\]\\$\[$(tput sgr0)\]"
 
 	export PS1="$_ELAPS $_HOST $_DIR $_PROMPT "
@@ -91,21 +91,21 @@ else
 	# see also: http://nuclearsquid.com/writings/git-tricks-tips-workflows/
 	# and also: http://durdn.com/blog/2012/11/22/must-have-git-aliases-advanced-examples/
 	# -------------------------------------------------------------------------
-	alias g='git'							# save 66% of typing
-	complete -o default -o nospace -F _git g	# autocomplete for 'g' as well
-	function ga() { git add "$1"\ ; }		# add files to be tracked
-	function gc() { git commit -m "$@" ; }	# commit changes locally
-	function keysx() { tr '[:upper:]' '[:lower:]' < "$1" | sort | uniq | wc -l ; }
+	complete -o default -o nospace -F _git g # autocomplete for 'g' as well
+	ga() { git add "$1"\ ; }				# add files to be tracked
+	gc() { git commit -m "$@" ; }			# commit changes locally
+	keysx() { tr '[:upper:]' '[:lower:]' < "$1" | sort | uniq | wc -l ; }
 
+	alias g='git'							# save 66% of typing
+	alias gb='git branch'					# so many parallel universes :-)
 	alias gd='git diff'						# see what happened
 	alias gh='git log --follow '			# git history for a file
 	alias gi='git check-ignore -v *'		# see what's being ignored
-	#alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
+#	alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
 	alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
 	alias go='git remote show origin'
 	alias gp='git push -u origin master'	# send changes upstream
 	alias gs='git status'					# summarize; you may like --short
-
 	alias gsl='git stash list'				# git-stash(1)
 	alias gsp='git stash pop'				# git-stash(1)
 	alias gss='git stash save'				# git-stash(1)
@@ -117,6 +117,18 @@ else
 		alias brewski='brew update && brew upgrade && brew cleanup; brew doctor'
 		alias brew_installed='brew leaves'	# top-level installed packages
 		alias brew_versions='brew list --versions'
+		_BREW=1								# remember: homebrew is installed
+	else
+		unset _BREW							# remember: homebrew not installed
+	fi
+
+	# -------------------------------------------------------------------------
+	# GNU core utilities (coreutils) (via homebrew)
+	# -------------------------------------------------------------------------
+	if command -v gls > /dev/null ; then
+		alias ll='gls -lAhF'				# ls with kb, mb, gb
+		alias lr='gls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
+		alias ls='gls -FG --time-style=iso --color=auto'
 	fi
 
 	# -------------------------------------------------------------------------
@@ -162,7 +174,7 @@ else
 	# Bash-completion (via homebrew) presents options to the user when the Tab
 	# key is pressed. Read github.com/bobthecow/git-flow-completion
 	# =========================================================================
-	if brew ls --versions bash-completion > /dev/null; then
+	if [[ -n ${_BREW-} ]] && brew ls --versions bash-completion > /dev/null; then
 		# The package is installed.
 		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
@@ -174,10 +186,10 @@ else
 	# -------------------------------------------------------------------------
 	# shellcheck disable=SC2155				# ignore well-established convention
 	_DIR="\[\033[38;5;248m\]\W\[$(tput sgr0)\]"
-	_BRANCH="\[\033[01;31m\]`git branch 2>/dev/null | cut -f2 -d\* -s`\[\033[01;32m\]"
+	_BRANCH="\[\033[01;31m\]$(git branch 2>/dev/null | cut -f2 -d\* -s)\[\033[01;32m\]"
 	_PROMPT="\[\033[38;5;2m\]\\$\[$(tput sgr0)\]"
 
-	export PS1="$_DIR $_BRANCH $_PROMPT "
+	export PS1="$_DIR$_BRANCH $_PROMPT "
 
 	# -------------------------------------------------------------------------
 	# Solutions to developing locally (on a laptop) while testing on a remote
@@ -218,7 +230,7 @@ else
 		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
 
 	# -------------------------------------------------------------------------
-	# Copy local work to the remote one file or folder at a time.
+	# Copy local work to/from the remote one file or folder at a time.
 	# -------------------------------------------------------------------------
 	touat () {
 		if [ -z "$1" ]; then
@@ -246,14 +258,14 @@ else
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
 	# -------------------------------------------------------------------------
 	ustart () {
-		sudo launchctl load /Library/LaunchDaemons/com.opendns.osx.RoamingClientConfigUpdater.plist;
-		launchctl load /Library/LaunchAgents/com.opendns.osx.RoamingClientMenubar.plist;
+		sudo launchctl load /Library/LaunchDaemons/com.opendns.osx.RoamingClientConfigUpdater.plist
+		launchctl load /Library/LaunchAgents/com.opendns.osx.RoamingClientMenubar.plist
 	}
 
 	ustop () {
-		sudo launchctl remove com.opendns.osx.RoamingClientConfigUpdater;
-		launchctl remove com.opendns.osx.RoamingClientMenubar;
-		sudo killall OpenDNSDiagnostic &>/dev/null;
+		sudo launchctl remove com.opendns.osx.RoamingClientConfigUpdater
+		launchctl remove com.opendns.osx.RoamingClientMenubar
+		sudo killall OpenDNSDiagnostic &>/dev/null
 	}
 
 	# -------------------------------------------------------------------------
