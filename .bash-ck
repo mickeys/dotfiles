@@ -19,6 +19,9 @@ alias c='clear'								# clear terminal screen
 alias d="printf \"\033[31;1;31m%0.s*\033[0m\" {1..111}" # easy-to-see red line
 alias df='df -h'							# show human-readable sizes
 alias h='history'							# bash command history
+alias l='ls -l -A'							# long listing, hiddens
+alias ll='ls -lAhF'							# kb, mb, gb; hiddens; classified
+alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias pd='pushd'							# manipulate directory stack
 
 # =============================================================================
@@ -29,6 +32,11 @@ if tput colors ne "-1" &> /dev/null ; then
 	export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'
 	export TERM=xterm-color					# use color-capable termcap
 fi
+
+# =============================================================================
+# Miscellaneous common things.
+# =============================================================================
+if command -v less &> /dev/null ; then export PAGER='less' ; fi
 
 # =============================================================================
 # Determine whether you're on a local or remote (vagrant) instance.
@@ -125,10 +133,12 @@ else
 	# -------------------------------------------------------------------------
 	# GNU core utilities (coreutils) (via homebrew)
 	# -------------------------------------------------------------------------
-	if command -v gls > /dev/null ; then
-		alias ll='gls -lAhF'				# ls with kb, mb, gb
-		alias lr='gls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
-		alias ls='gls -FG --time-style=iso --color=auto'
+	if command -v gdircolors > /dev/null ; then
+		export COLUMNS						# remember columns for subprocesses
+		eval "$(gdircolors)"				# activate default color database
+		function ls {
+			command ls -F -h --color=auto -v --author --time-style=long-iso -C "$@" | $PAGER -R -X -F
+		}
 	fi
 
 	# -------------------------------------------------------------------------
@@ -213,6 +223,7 @@ else
 
 	export _REMO='172.30.30.215'			# your remote's IP addr
 	export _SSHK="$HOME/.ssh/github-ck"		# your local private SSH key
+
 	alias cpb="cpbash vagrant@\${_REMO}:"	# copy this bash file to remote
 	alias cpk="ssh-copy-id -i \${_SSHK} vagrant@\${_REMO}" # copy key; no passwd
 	alias sshr="ssh vagrant@\${_REMO}"		# -i ${_SSHK} unneeded
@@ -224,7 +235,6 @@ else
 	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
 
 	alias cheddar="cd \$_LOCAL_CHEDDAR"		# mimic vagrant command
-
 	alias rch="rsync --dry-run --human-readable --progress \
 		-e \"ssh -i \$_SSHK\" \
 		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
