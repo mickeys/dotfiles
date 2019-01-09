@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 
-# +-------------+--------------------------------------------------------------
-# | filename	| .bash-ck (symlink by: ln -s .bash-ck .bash_profile)
-# | version		| tracked at https://github.com/mickeys/dotfiles
-# | purpose		| single bash run-commands file for CK local & vagrant hosts
-# +-------------+--------------------------------------------------------------
+# +------------------------+---------------------------------------------------
+# .                        . This is a basic .bash_profile for Credit Karma. It
+# .            `:-         . covers configuration for both local (laptop) and
+# .            ./:         . remote hosts (CKVM & UAT).
+# .     `...`  ./:     --` .
+# .  `://:-::: ./:   `:/:  . Clone this file, test it by `source .bash_ck`, and
+# . `//-       ./:  .//-   . when you're sure it's right for you, symlink it to
+# . .//        ./:.://`    . your home by `ln -s .bash_ck .bash_profile`.
+# . `//.       .///::/:`   .
+# .  -//:...-: .//`  -//`  . 
+# .    .-::--. `--    .--` . Find me at https://github.com/mickeys/dotfiles/ or
+# .                        . code.corp.creditkarma.com/michael-sattler-ck/dotfiles/
+# +------------------------+---------------------------------------------------
 
 #set -x										# toggle debugging verbosity
 # github.com/koalaman/shellcheck is used to bomb-proof this (and other) scripts
@@ -15,6 +23,7 @@ set -u o pipefail							# unofficial bash strict mode
 # Aliases, alphabetically
 # =============================================================================
 export BLOCKSIZE=1k							# default blocksize for ls, df, du
+
 alias c='clear'								# clear terminal screen
 alias d="printf \"\033[31;1;31m%0.s*\033[0m\" {1..111}" # easy-to-see red line
 alias df='df -h'							# show human-readable sizes
@@ -179,13 +188,13 @@ else
 	# -------------------------------------------------------------------------
 	# rvm (Ruby version manager)
 	# -------------------------------------------------------------------------
-	export rvm_error_clr=''					# kludge to fix unbound_variable
-	export rvm_bash_nounset=''				# kludge to fix unbound_variable
-	export _system_name=''					# kludge to fix unbound_variable
-	export __rvm_sed=''						# kludge to fix unbound_variable
-
 	# Load RVM into a shell session _as a function_
 	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+
+	export rvm_bash_nounset=${rvm_bash_nounset:-} # now empty string if unbound variable
+	export rvm_error_clr=${rvm_error_clr:-}	# now empty string if unbound variable
+	export _system_name=${_system_name:-}	# now empty string if unbound variable
+	export __rvm_sed=${__rvm_sed:-}			# now empty string if unbound variable
 
 	# -------------------------------------------------------------------------
 	# gpg2 (via homebrew) used by rvm
