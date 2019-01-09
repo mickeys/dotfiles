@@ -36,7 +36,7 @@ fi
 # =============================================================================
 # Miscellaneous common things.
 # =============================================================================
-if command -v less &> /dev/null ; then export PAGER='less' ; fi
+if command -v less &> /dev/null ; then export PAGER='less' ; else export PAGER='more' ; fi
 
 # =============================================================================
 # Determine whether you're on a local or remote (vagrant) instance.
@@ -153,6 +153,8 @@ else
 		alias mysql='mysql -uroot'	# connect
 		alias mysql_start='${_MYSQL}/bin/mysql.server start' # start manually
 		# brew services start mysql@5.6		# start automatically
+	else
+		unset _MYSQL						# not installed? not needed!
 	fi
 
 	# -------------------------------------------------------------------------
@@ -170,10 +172,23 @@ else
 		export CPPFLAGS="-I${_OPENSSL}/include"
 
 		alias openssl_rehash='${_OPENSSL}/bin/c_rehash'
+	else
+		unset _OPENSSL						# not installed? not needed!
 	fi
 
 	# -------------------------------------------------------------------------
-	# gpg2 (via homebrew) used by rvm (Ruby version manager)
+	# rvm (Ruby version manager)
+	# -------------------------------------------------------------------------
+	export rvm_error_clr=''					# kludge to fix unbound_variable
+	export rvm_bash_nounset=''				# kludge to fix unbound_variable
+	export _system_name=''					# kludge to fix unbound_variable
+	export __rvm_sed=''						# kludge to fix unbound_variable
+
+	# Load RVM into a shell session _as a function_
+	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+
+	# -------------------------------------------------------------------------
+	# gpg2 (via homebrew) used by rvm
 	# -------------------------------------------------------------------------
 	if command -v gpg2 > /dev/null ; then	# if package is installed
 		export LDFLAGS="-L/usr/local/opt/libffi/lib"	# for compilers
@@ -185,7 +200,6 @@ else
 	# key is pressed. Read github.com/bobthecow/git-flow-completion
 	# =========================================================================
 	if [[ -n ${_BREW-} ]] && brew ls --versions bash-completion > /dev/null; then
-		# The package is installed.
 		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
@@ -222,25 +236,46 @@ else
 	}
 
 	export _REMO='172.30.30.215'			# your remote's IP addr
-	export _SSHK="$HOME/.ssh/github-ck"		# your local private SSH key
+	# -------------------------------------------------------------------------
+	# Which SSH private key to be used for authenticating to remotes?
+	# -------------------------------------------------------------------------
+	if [ -f "$HOME/.ssh/github-ck" ] ; then
+		export _SSHK="$HOME/.ssh/github-ck"	# CK-specific private SSH key
+	else
+		export _SSHK="$HOME/.ssh/id_rsa"	# default private SSH key
+	fi
 
 	alias cpb="cpbash vagrant@\${_REMO}:"	# copy this bash file to remote
 	alias cpk="ssh-copy-id -i \${_SSHK} vagrant@\${_REMO}" # copy key; no passwd
 	alias sshr="ssh vagrant@\${_REMO}"		# -i ${_SSHK} unneeded
 
 	# -------------------------------------------------------------------------
+	# Set up and sanity-check local and remote cheddar git trees.
+	# -------------------------------------------------------------------------
+	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
+	export _LOCAL_CHEDDAR="$HOME/git-repos/automation/cheddar"
+
+	if [ ! -d "$_LOCAL_CHEDDAR" ] ; then
+		echo "warning: not finding local cheddar at \"${_LOCAL_CHEDDAR/$HOME/\~}\""
+	else
+		alias cheddar="cd \$_LOCAL_CHEDDAR"	# mimic vagrant command
+	fi
+
+	if ! ssh -i "$_SSHK" vagrant@${_REMO} test -d "$_REMO_CHEDDAR" ; then
+		echo "warning: not finding remote cheddar at \"$_REMO:$_REMO_CHEDDAR/\""
+	fi
+
+	# -------------------------------------------------------------------------
 	# Copy local work to the remote in one fell swoop! Git commit at success!
 	# -------------------------------------------------------------------------
-	export _LOCAL_CHEDDAR="$HOME/git-repos/automation/cheddar"
-	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
-
-	alias cheddar="cd \$_LOCAL_CHEDDAR"		# mimic vagrant command
 	alias rch="rsync --dry-run --human-readable --progress \
 		-e \"ssh -i \$_SSHK\" \
 		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
 
 	# -------------------------------------------------------------------------
 	# Copy local work to/from the remote one file or folder at a time.
+	#
+	# TO-DO: implement a general way to copy regardless of IP parts given.
 	# -------------------------------------------------------------------------
 	touat () {
 		if [ -z "$1" ]; then
@@ -262,7 +297,9 @@ else
 	# Miscellany.
 	# -------------------------------------------------------------------------
 	tit() { echo -ne "\033]0;${*}\007" ; }	# iTerm -- set tab name
+
 	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
+	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
 
 	# -------------------------------------------------------------------------
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
