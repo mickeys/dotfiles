@@ -17,7 +17,17 @@
 #set -x										# toggle debugging verbosity
 # github.com/koalaman/shellcheck is used to bomb-proof this (and other) scripts
 # shellcheck disable=1090,1091				# tell shellcheck source script URLs
-set -u o pipefail							# unofficial bash strict mode
+#set -u o pipefail							# unofficial bash strict mode
+
+# =============================================================================
+# =============================================================================
+_MY_SECRETS="$HOME/.my_ck_secrets"
+if [ -e "$_MY_SECRETS" ] ; then
+	# shellcheck source=/Users/michael.sattler/.my_ck_secrets
+	source "$_MY_SECRETS"
+else
+	echo "Configuration file \"$_MY_SECRETS\" not found."
+fi
 
 # =============================================================================
 # Aliases, alphabetically
@@ -25,7 +35,6 @@ set -u o pipefail							# unofficial bash strict mode
 export BLOCKSIZE=1k							# default blocksize for ls, df, du
 
 alias c='clear'								# clear terminal screen
-alias d="printf \"\033[31;1;31m%0.s*\033[0m\" {1..111}" # easy-to-see red line
 alias df='df -h'							# show human-readable sizes
 alias h='history'							# bash command history
 alias l='ls -l -A'							# long listing, hiddens
@@ -145,9 +154,9 @@ else
 	if command -v gdircolors > /dev/null ; then
 		export COLUMNS						# remember columns for subprocesses
 		eval "$(gdircolors)"				# activate default color database
-		function ls {
-			command ls -F -h --color=auto -v --author --time-style=long-iso -C "$@" | $PAGER -R -X -F
-		}
+#		function ls {
+#			command ls -F -h --color=auto -v --author --time-style=long-iso -C "$@" | $PAGER -R -X -F
+#		}
 	fi
 
 	# -------------------------------------------------------------------------
@@ -186,17 +195,6 @@ else
 	fi
 
 	# -------------------------------------------------------------------------
-	# rvm (Ruby version manager)
-	# -------------------------------------------------------------------------
-	# Load RVM into a shell session _as a function_
-	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
-
-	export rvm_bash_nounset=${rvm_bash_nounset:-} # now empty string if unbound variable
-	export rvm_error_clr=${rvm_error_clr:-}	# now empty string if unbound variable
-	export _system_name=${_system_name:-}	# now empty string if unbound variable
-	export __rvm_sed=${__rvm_sed:-}			# now empty string if unbound variable
-
-	# -------------------------------------------------------------------------
 	# gpg2 (via homebrew) used by rvm
 	# -------------------------------------------------------------------------
 	if command -v gpg2 > /dev/null ; then	# if package is installed
@@ -211,6 +209,7 @@ else
 	if [[ -n ${_BREW-} ]] && brew ls --versions bash-completion > /dev/null; then
 		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
+		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-prompt.sh
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
 	fi
 
@@ -244,7 +243,14 @@ else
 		fi
 	}
 
-	export _REMO='172.30.30.215'			# your remote's IP addr
+	# -------------------------------------------------------------------------
+	# Print a red line to make it easy to scroll back to this point in terminal.
+	# -------------------------------------------------------------------------
+	d() {
+		printf "\033[31;1;31m%0.s*\033[0m" {1..111} # easy-to-see red line
+		printf "\n"							# trailing blank line
+	}
+
 	# -------------------------------------------------------------------------
 	# Which SSH private key to be used for authenticating to remotes?
 	# -------------------------------------------------------------------------
@@ -270,8 +276,15 @@ else
 		alias cheddar="cd \$_LOCAL_CHEDDAR"	# mimic vagrant command
 	fi
 
-	if ! ssh -i "$_SSHK" vagrant@${_REMO} test -d "$_REMO_CHEDDAR" ; then
-		echo "warning: not finding remote cheddar at \"$_REMO:$_REMO_CHEDDAR/\""
+	# if ( remote-checking-wanted and network-is-present ) check remote
+#	_NETWORK_UP=$(eval nc -z -w 1 8.8.8.8 80)
+_NETWORK_UP='' #XYZZY
+	if [[ ${_CHECK_REMOTE_CHEDDAR:-} &&  $_NETWORK_UP ]] ; then
+		if ! ssh -i "$_SSHK" vagrant@"${_REMO}" test -d "$_REMO_CHEDDAR" ; then
+			echo "warning: not finding remote cheddar at \"$_REMO:$_REMO_CHEDDAR/\""
+		fi
+	else
+		echo 'info: not checking remote cheddar file structure.'
 	fi
 
 	# -------------------------------------------------------------------------
@@ -281,34 +294,93 @@ else
 		-e \"ssh -i \$_SSHK\" \
 		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
 
+#	# -------------------------------------------------------------------------
+#	# Copy local work to/from the remote one file or folder at a time.
+#	#
+# TO-DO: figure out a general way to connect to any UAT given a partial IP
+# TO-DO: address, regardless of whether it's a .8.* mobile UAT or otherwise.
+#	# -------------------------------------------------------------------------
+#	touat () {
+#		if [ -z "$1" ]; then
+#			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP LocalFileName RemoteFilePath"
+#		else
+#			scp -i "$_SSHK" "$2" "vagrant@172.30.8.$1:$3"
+#		fi
+#	}
+#
+#	fromuat () {
+#		if [ -z "$1" ]; then
+#			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP RemoteFilePath LocalFileName"
+#		else
+#			scp -i "$_SSHK" "vagrant@172.30.8.$1:$2" "$3"
+#		fi
+#	}
+
 	# -------------------------------------------------------------------------
-	# Copy local work to/from the remote one file or folder at a time.
+	# SauceLabs
+	# -------------------------------------------------------------------------
+	if [[ ${_SAUCE_LABS_ACCESS_KEY:-} ]] ; then
+
+		_SL_L_PRETTY="${_SAUCE_DIR/$HOME/\~}"	# easier-to-read output below
+		# shellcheck disable=SC2086				# must glob to expand matches
+		set -- $_SAUCE_DIR						# glob expand all matching dirs
+		if [[ $# -eq 0 ]] ; then
+			echo "warning: missing SauceLabs folder at \"$_SL_L_PRETTY\"."
+		elif [[ $# -gt 1 ]] ; then
+			echo "warning: too many SauceLabs folders at \"$_SL_L_PRETTY\"."
+		fi
+
+		# shellcheck disable=2139				# expand when aliased 
+		alias sauce="cd $_SAUCE_DIR && ulimit -n 8000 && bin/sc \
+			-u $_SAUCE_USERNAME \
+			-k $_SAUCE_LABS_ACCESS_KEY \
+			-i $_SAUCE_TUNNELNAME"
+	fi
+
+	# -------------------------------------------------------------------------
+	# iTerm2 -- www.iterm2.com 
 	#
-	# TO-DO: implement a general way to copy regardless of IP parts given.
+	# this is an expanded, corrected version of:
+	# https://superuser.com/questions/419775/with-bash-iterm2-how-to-name-tabs
 	# -------------------------------------------------------------------------
-	touat () {
-		if [ -z "$1" ]; then
-			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP LocalFileName RemoteFilePath"
-		else
-			scp -i "$_SSHK" "$2" "vagrant@172.30.8.$1:$3"
-		fi
-	}
-
-	fromuat () {
-		if [ -z "$1" ]; then
-			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP RemoteFilePath LocalFileName"
-		else
-			scp -i "$_SSHK" "vagrant@172.30.8.$1:$2" "$3"
-		fi
-	}
+	# if iTerm2 shell integration exists then use it
+	test -e "${HOME}/.iterm2_shell_integration.bash" && \
+		source "${HOME}/.iterm2_shell_integration.bash"
 
 	# -------------------------------------------------------------------------
-	# Miscellany.
+	# set iTerm2 tab titles automagically (and manually)
 	# -------------------------------------------------------------------------
-	tit() { echo -ne "\033]0;${*}\007" ; }	# iTerm -- set tab name
+	title() {
+		if [ "$ITERM_SESSION_ID" ]; then	# only relavent if within iTerm?
+			if [ "$1" ] ; then				# if the user supplied a tab title
+				# shellcheck disable=SC2015
+				test -e "${HOME}/.iterm2_shell_integration.bash" \
+					&& export PROMPT_COMMAND='__bp_precmd_invoke_cmd' \
+					|| unset PROMPT_COMMAND
+				echo -ne "\033]0;${*}\007"
+			else							# if there's no tab title use PWD
+				# shellcheck disable=SC2015
+				test -e "${HOME}/.iterm2_shell_integration.bash" \
+					&& export PROMPT_COMMAND='echo -ne "\033]0;${PWD/#$HOME/\~}\007";__bp_precmd_invoke_cmd' \
+					|| export PROMPT_COMMAND='echo -ne "\033]0;${PWD/#$HOME/\~}\007"'
+			fi								# end of use PWD
+		fi									# end of ITERM_SESSION_ID
+	}										# end of title()
+	title									# set iTerm tab if within iTerm
 
+	# -------------------------------------------------------------------------
+	# Miscellany
+	# -------------------------------------------------------------------------
+	alias bb='bbedit'						# use BBEdit text editor from shell
 	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
+	alias sc='shellcheck'					# syntax-check shell scripts
 	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
+	# vagrant
+	alias vhalt='vagrant halt'
+	alias vreload='vagrant reload'
+	alias vssh='vagrant ssh'
+	alias vstat='vagrant status'
+	alias vup='vagrant up'
 
 	# -------------------------------------------------------------------------
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
@@ -327,6 +399,7 @@ else
 	# -------------------------------------------------------------------------
 	# Remove duplicate $PATH entries.
 	# -------------------------------------------------------------------------
+#	alias showpath=echo "${PATH//:/$'\n'}"
 	cleanPath() {
 		if [ -n "$PATH" ]; then				# if the system PATH exists
 		  oldPath=$PATH:; newPath=			# make a copy & new working space
@@ -345,4 +418,19 @@ else
 
 	cleanPath								# remove duplicates from PATH
 	export PATH								# share and enjoy!
+
+	# -------------------------------------------------------------------------
+	# THIS MUST BE AT THE END OF THE FILE BECAUSE rvm IS FRAGILE AND WILL YELL
+	# ABOUT "is not at first place". GRRRR
+	# -------------------------------------------------------------------------
+	# rvm (Ruby version manager)
+	# -------------------------------------------------------------------------
+	# Load RVM into a shell session _as a function_
+	# shellcheck source=/Users/michael.sattler/.rvm/scripts/rvm
+#	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+
+	export rvm_bash_nounset=${rvm_bash_nounset:-} # initialize if unbound variable
+	export rvm_error_clr=${rvm_error_clr:-}	# initialize if unbound variable
+	export _system_name=${_system_name:-}	# initialize if unbound variable
+	export __rvm_sed=${__rvm_sed:-}			# initialize if unbound variable
 fi
