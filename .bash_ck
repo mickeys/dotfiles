@@ -297,9 +297,8 @@ else
 	fi
 
 	# if ( remote-checking-wanted and network-is-present ) check remote
-#	_NETWORK_UP=$(eval nc -z -w 1 8.8.8.8 80)
-_NETWORK_UP='' #XYZZY
-	if [[ ${_CHECK_REMOTE_CHEDDAR:-} &&  $_NETWORK_UP ]] ; then
+	_NETWORK_UP=$(eval nc -dzw1 8.8.8.8 443 &> /dev/null)
+	if [[ ${_CHECK_REMOTE_CHEDDAR:-} && $_NETWORK_UP ]] ; then
 		if ! ssh -i "$_SSHK" vagrant@"${_REMO}" test -d "$_REMO_CHEDDAR" ; then
 			echo "warning: not finding remote cheddar at \"$_REMO:$_REMO_CHEDDAR/\""
 		fi
@@ -313,28 +312,6 @@ _NETWORK_UP='' #XYZZY
 	alias rch="rsync --dry-run --human-readable --progress \
 		-e \"ssh -i \$_SSHK\" \
 		-avz \$_LOCAL_CHEDDAR/ vagrant@\$_REMO:\$_REMO_CHEDDAR/"
-
-#	# -------------------------------------------------------------------------
-#	# Copy local work to/from the remote one file or folder at a time.
-#	#
-# TO-DO: figure out a general way to connect to any UAT given a partial IP
-# TO-DO: address, regardless of whether it's a .8.* mobile UAT or otherwise.
-#	# -------------------------------------------------------------------------
-#	touat () {
-#		if [ -z "$1" ]; then
-#			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP LocalFileName RemoteFilePath"
-#		else
-#			scp -i "$_SSHK" "$2" "vagrant@172.30.8.$1:$3"
-#		fi
-#	}
-#
-#	fromuat () {
-#		if [ -z "$1" ]; then
-#			echo "usage: ${FUNCNAME[0]} UAT_LAST_IP RemoteFilePath LocalFileName"
-#		else
-#			scp -i "$_SSHK" "vagrant@172.30.8.$1:$2" "$3"
-#		fi
-#	}
 
 	# -------------------------------------------------------------------------
 	# SauceLabs
@@ -351,10 +328,10 @@ _NETWORK_UP='' #XYZZY
 		fi
 
 		# shellcheck disable=2139				# expand when aliased 
-		alias sauce="cd $_SAUCE_DIR && ulimit -n 8000 && bin/sc \
-			-u $_SAUCE_USERNAME \
-			-k $_SAUCE_LABS_ACCESS_KEY \
-			-i $_SAUCE_TUNNELNAME"
+		alias sauce="ulimit -n 8000 && $_SAUCE_DIR/bin/sc \
+			-u \"$_SAUCE_USERNAME\" \
+			-k \"$_SAUCE_LABS_ACCESS_KEY\" \
+			-i \"$_SAUCE_TUNNELNAME\""
 	fi
 
 	# -------------------------------------------------------------------------
@@ -396,13 +373,19 @@ _NETWORK_UP='' #XYZZY
 	alias bb='bbedit'						# use BBEdit text editor from shell
 	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
 	alias sc='shellcheck'					# syntax-check shell scripts
+	alias showpath="echo \"${PATH//:/$'\n'}\" | sort" # PATH, line by line
 	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
-	# vagrant
-	alias vhalt='vagrant halt'
-	alias vreload='vagrant reload'
-	alias vssh='vagrant ssh'
-	alias vstat='vagrant status'
-	alias vup='vagrant up'
+
+	if command -v vagrant &> /dev/null ; then
+		alias vhalt='vagrant halt'
+		alias vreload='vagrant reload'
+		alias vssh='vagrant ssh'
+		alias vstat='vagrant status'
+		alias vup='vagrant up'
+	fi
+
+	# shellcheck disable=SC2155				# declare and assign separately...
+	export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
 
 	# -------------------------------------------------------------------------
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
@@ -421,7 +404,6 @@ _NETWORK_UP='' #XYZZY
 	# -------------------------------------------------------------------------
 	# Remove duplicate $PATH entries.
 	# -------------------------------------------------------------------------
-#	alias showpath=echo "${PATH//:/$'\n'}"
 	cleanPath() {
 		if [ -n "$PATH" ]; then				# if the system PATH exists
 		  oldPath=$PATH:; newPath=			# make a copy & new working space
@@ -437,7 +419,6 @@ _NETWORK_UP='' #XYZZY
 		  unset oldPath newPath x			# clean up after ourselves
 		fi
 	}
-
 	cleanPath								# remove duplicates from PATH
 	export PATH								# share and enjoy!
 
