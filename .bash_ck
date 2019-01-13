@@ -37,18 +37,33 @@ export BLOCKSIZE=1k							# default blocksize for ls, df, du
 alias c='clear'								# clear terminal screen
 alias df='df -h'							# show human-readable sizes
 alias h='history'							# bash command history
-alias l='ls -l -A'							# long listing, hiddens
-alias ll='ls -lAhF'							# kb, mb, gb; hiddens; classified
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias pd='pushd'							# manipulate directory stack
 
 # =============================================================================
-# Enhance terminal commands with color (if capable).
+# GNU core utilities (coreutils) (via homebrew)
 # =============================================================================
-if tput colors ne "-1" &> /dev/null ; then
-	export CLICOLOR=1						# make ls colorful
-	export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'
-	export TERM=xterm-color					# use color-capable termcap
+if command -v gls >& /dev/null ; then		# GNU coreutils are installed
+	# -------------------------------------------------------------------------
+	# coreutils default settings
+	# -------------------------------------------------------------------------
+	if command -v gdircolors > /dev/null ; then
+		export COLUMNS						# remember columns for subprocesses
+		eval "$(gdircolors)"				# activate default color database
+	fi
+	alias ls='gls --classify --almost-all --color'
+	alias ll='gls -l --no-group --human-readable --classify --almost-all --color=auto -v --time-style=long-iso'
+else
+	# -------------------------------------------------------------------------
+	# mimic coreutils as much as possible with built-ins
+	# -------------------------------------------------------------------------
+	if tput colors ne "-1" &> /dev/null ; then
+		export CLICOLOR=1					# make ls colorful
+		export LSCOLORS='BxGxfxfxCxdxdxhbadbxbx'
+		export TERM=xterm-color				# use color-capable termcap
+	fi
+	alias ls='ls -AhF'						# long listing, some hiddens
+	alias ll='ls -lAhF'						# kb, mb, gb; hiddens; classified
 fi
 
 # =============================================================================
@@ -146,17 +161,6 @@ else
 		_BREW=1								# remember: homebrew is installed
 	else
 		unset _BREW							# remember: homebrew not installed
-	fi
-
-	# -------------------------------------------------------------------------
-	# GNU core utilities (coreutils) (via homebrew)
-	# -------------------------------------------------------------------------
-	if command -v gdircolors > /dev/null ; then
-		export COLUMNS						# remember columns for subprocesses
-		eval "$(gdircolors)"				# activate default color database
-#		function ls {
-#			command ls -F -h --color=auto -v --author --time-style=long-iso -C "$@" | $PAGER -R -X -F
-#		}
 	fi
 
 	# -------------------------------------------------------------------------
@@ -368,14 +372,16 @@ else
 	title									# set iTerm tab if within iTerm
 
 	# -------------------------------------------------------------------------
-	# Miscellany
+	# BBEdit -- www.barebones.com/products/bbedit/
 	# -------------------------------------------------------------------------
-	alias bb='bbedit'						# use BBEdit text editor from shell
-	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
-	alias sc='shellcheck'					# syntax-check shell scripts
-	alias showpath="echo \"${PATH//:/$'\n'}\" | sort" # PATH, line by line
-	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
+	if command -v bbedit &> /dev/null ; then
+		setenv EDITOR "bbedit bbedit --wait --resume" # use as default editor
+		alias bb='bbedit'					# use BBEdit text editor from shell
+	fi
 
+	# -------------------------------------------------------------------------
+	# vagrant -- www.vagrantup.com
+	# -------------------------------------------------------------------------
 	if command -v vagrant &> /dev/null ; then
 		alias vhalt='vagrant halt'
 		alias vreload='vagrant reload'
@@ -383,6 +389,14 @@ else
 		alias vstat='vagrant status'
 		alias vup='vagrant up'
 	fi
+
+	# -------------------------------------------------------------------------
+	# Miscellany
+	# -------------------------------------------------------------------------
+	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
+	alias sc='shellcheck'					# syntax-check shell scripts
+	alias showpath="echo \"\${PATH//:/$'\n'}\" | sort" # PATH, line by line
+	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
 
 	# shellcheck disable=SC2155				# declare and assign separately...
 	export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
