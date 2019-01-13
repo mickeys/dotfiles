@@ -246,10 +246,30 @@ else
 	# -------------------------------------------------------------------------
 	# Print a red line to make it easy to scroll back to this point in terminal.
 	# -------------------------------------------------------------------------
-	d() {
+	function d {
 		printf "\033[31;1;31m%0.s*\033[0m" {1..111} # easy-to-see red line
 		printf "\n"							# trailing blank line
 	}
+
+	# -------------------------------------------------------------------------
+	# Keep just one ssh-agent running in a multi-tab environment, per
+	# http://rabexc.org/posts/pitfalls-of-ssh-agents
+	#
+	# ssh-add(1) says exit status is 0 on success, 1 if the specified command
+	# fails, and 2 if ssh-add is unable to contact the authentication agent.
+	# -------------------------------------------------------------------------
+	ssh-add -l &>/dev/null					# ssh-add list all known keys
+	if [ "$?" == 2 ]; then					# if unable to contact ssh-agent
+		test -r ~/.ssh-agent && \
+			eval "$(<~/.ssh-agent)" >/dev/null # if file readable read environ
+
+		ssh-add -l &>/dev/null				# ssh-add list all known keys
+		if [ "$?" == 2 ]; then				# if unable to contact ssh-agent
+			(umask 066; ssh-agent > ~/.ssh-agent) # start w 066 & save output
+			eval "$(<~/.ssh-agent)" >/dev/null	# if file readable read environ
+			ssh-add							# add keys
+		fi
+	fi
 
 	# -------------------------------------------------------------------------
 	# Which SSH private key to be used for authenticating to remotes?
@@ -350,6 +370,7 @@ _NETWORK_UP='' #XYZZY
 	# -------------------------------------------------------------------------
 	# set iTerm2 tab titles automagically (and manually)
 	# -------------------------------------------------------------------------
+	# shellcheck disable=SC2120				# it's ok to call title() w/o args
 	title() {
 		if [ "$ITERM_SESSION_ID" ]; then	# only relavent if within iTerm?
 			if [ "$1" ] ; then				# if the user supplied a tab title
@@ -366,6 +387,7 @@ _NETWORK_UP='' #XYZZY
 			fi								# end of use PWD
 		fi									# end of ITERM_SESSION_ID
 	}										# end of title()
+	# shellcheck disable=SC2119				# it's ok to call title() w/o args
 	title									# set iTerm tab if within iTerm
 
 	# -------------------------------------------------------------------------
