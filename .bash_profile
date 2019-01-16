@@ -737,7 +737,13 @@ alias cd..='cd ../'                         # Go back 1 directory level (for fas
 alias ..='cd ../'                           # Go back 1 directory level
 alias ...='cd ../../'                       # Go back 2 directory levels
 
-#alias cpbash='scp ~/.bash_profile USERNAME_OVER_THERE@hostname:'
+cpbash() {
+	if [ -z "$1" ] ; then
+		echo "usage: ${FUNCNAME[0]} USERNAME@REMOTE_HOST:"
+	else
+		scp ~/.bash-ck.sh "$1"
+	fi
+}
 alias ccze='ccze -A -o nolookups'			# log colorize more quickly
 alias d='echo -en "\033[31;1;31m**********************************************************************************************************************\033[0m\n"'
 alias dirs='dirs -v'						# show dir stack vertically
@@ -868,7 +874,7 @@ EOT
 	cd "$currFolderPath" || exit
 }
 
-function tit { echo -ne "\033]0;${*}\007" ; }	# iTerm set title bar
+tit() { echo -ne "\033]0;${*}\007" ; }		# iTerm -- set tab name
 
 # -----------------------------------------------------------------------------
 # extract best-known archives with one command
