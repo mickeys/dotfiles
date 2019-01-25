@@ -20,6 +20,7 @@
 #set -u o pipefail							# unofficial bash strict mode
 
 # =============================================================================
+# User-specific settings broken out to make updating this .bash_profile easier.
 # =============================================================================
 _MY_SECRETS="$HOME/.my_ck_secrets"
 if [ -e "$_MY_SECRETS" ] ; then
@@ -36,9 +37,46 @@ export BLOCKSIZE=1k							# default blocksize for ls, df, du
 
 alias c='clear'								# clear terminal screen
 alias df='df -h'							# show human-readable sizes
-alias h='history'							# bash command history
+alias du='du -ch'							# human-readable with grand total
+alias j='jobs -l'							# show background tasks (jobs)
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias pd='pushd'							# manipulate directory stack
+alias td='pushd $(mktemp -d)'				# create a temp dir and cd into it
+alias wget='wget -c'						# resume transfers by default
+
+# =============================================================================
+# UN*X command history
+# =============================================================================
+alias h='history'							# see what happened before
+HISTCONTROL=ignoredups:erasedups:ignorespace:ignoreboth # no dups;
+HISTFILE=~/.bash_eternal_history			# "eternal" ~ don't get truncated
+# was eternal (empty); now set at 999 (three digits easier to grok)
+HISTFILESIZE=999							# "eternal" ~ no max size
+HISTSIZE=999								# "eternal" ~ no max size
+HISTTIMEFORMAT="[%m-%d %H:%M] "				# add 24-hour timestamp to history
+shopt -s checkwinsize						# after each command check window size...
+shopt -q -s histappend >/dev/null 2>&1		# append, don't overwrite, history file
+export PROMPT_COMMAND='history -a' >/dev/null 2>&1
+
+# -----------------------------------------------------------------------------
+# less ~ the enhanced version of the 'more' page viewer
+# -----------------------------------------------------------------------------
+alias more='less'							# alias to use less
+export LC_ALL=en_US.UTF-8					# language variable to rule them all
+export LANG=en_us.UTF-8						# char set
+export PAGER=less							# tell the system to use less
+export LESSCHARSET='utf-8'					# was 'latin1'
+export LESSOPEN='|/usr/bin/lesspipe.sh %s 2>&-' # Use if lesspipe.sh exists
+#export LESS='-i -N -w  -z-4 -g -e -M -X -F -R -P%t?f%f :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
+
+# LESS man page colors (makes Man pages more readable).
+export LESS_TERMCAP_mb=$'\E[01;31m'
+export LESS_TERMCAP_md=$'\E[01;31m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_ue=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[01;32m'
 
 # =============================================================================
 # GNU core utilities (coreutils) (via homebrew)
@@ -70,6 +108,11 @@ fi
 # Miscellaneous common things.
 # =============================================================================
 if command -v less &> /dev/null ; then export PAGER='less' ; else export PAGER='more' ; fi
+
+mkcd() { if [ $# != 1 ]; then echo "Usage: mkcd DIR" else mkdir -p "$1" && cd "$1" || exit; fi }
+up() { cd "$(eval printf '../'%.0s '{1..$1}')" || exit ; } # go up $1 number of directories
+
+export IGNOREEOF="2"						# must ctrl-D twice to exit shell
 
 # =============================================================================
 # Determine whether you're on a local or remote (vagrant) instance.
@@ -152,6 +195,14 @@ else
 	alias gss='git stash save'				# git-stash(1)
 
 	# -------------------------------------------------------------------------
+	# node package manager (npm)
+	# -------------------------------------------------------------------------
+	if command -v npm > /dev/null ; then	# if npm is installed
+		alias gqlserv="pushd \$HOME/git-repos/cinf_graphiql-app/ ; npm run hot-dev-server"
+		alias gql="pushd \$HOME/git-repos/cinf_graphiql-app/ ; npm run start-hot"
+	fi
+
+	# -------------------------------------------------------------------------
 	# Homebrew macOS package manager (brew.sh)
 	# -------------------------------------------------------------------------
 	if command -v brew > /dev/null ; then	# if homebrew is installed
@@ -215,6 +266,17 @@ else
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
 		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-prompt.sh
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
+	fi
+
+	# =========================================================================
+	# Homebrew OpenSSL required environmental variables for gem bundler.
+	# =========================================================================
+	if [[ -n ${_BREW-} ]] && brew ls --versions openssl > /dev/null; then
+		_BREW_OPENSSL="$(brew --prefix openssl)"
+		export LDFLAGS=-L"${_BREW_OPENSSL}/lib"
+		export CPPFLAGS=-I"${_BREW_OPENSSL}include"
+		# For pkg-config to find this software you may need to set:
+		export PKG_CONFIG_PATH="${_BREW_OPENSSL}lib/pkgconfig"
 	fi
 
 	# -------------------------------------------------------------------------
@@ -292,7 +354,7 @@ else
 	# Set up and sanity-check local and remote cheddar git trees.
 	# -------------------------------------------------------------------------
 	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
-	export _LOCAL_CHEDDAR="$HOME/git-repos/automation/cheddar"
+	export _LOCAL_CHEDDAR="$HOME/git-repos/ck_automation/cheddar"
 
 	if [ ! -d "$_LOCAL_CHEDDAR" ] ; then
 		echo "warning: not finding local cheddar at \"${_LOCAL_CHEDDAR/$HOME/\~}\""
@@ -309,6 +371,8 @@ else
 	else
 		echo 'info: not checking remote cheddar file structure.'
 	fi
+
+	alias webd="\$_LOCAL_CHEDDAR/util/run_standalone_webdriver.sh 2>&1 | ccze"
 
 	# -------------------------------------------------------------------------
 	# Copy local work to the remote in one fell swoop! Git commit at success!
@@ -354,7 +418,7 @@ else
 	# shellcheck disable=SC2120				# it's ok to call title() w/o args
 	title() {
 		if [ "$ITERM_SESSION_ID" ]; then	# only relavent if within iTerm?
-			if [ "$1" ] ; then				# if the user supplied a tab title
+			if [[ $# -ne 0 ]] ; then		# if the user supplied a tab title
 				# shellcheck disable=SC2015
 				test -e "${HOME}/.iterm2_shell_integration.bash" \
 					&& export PROMPT_COMMAND='__bp_precmd_invoke_cmd' \
@@ -368,15 +432,44 @@ else
 			fi								# end of use PWD
 		fi									# end of ITERM_SESSION_ID
 	}										# end of title()
+
 	# shellcheck disable=SC2119				# it's ok to call title() w/o args
 	title									# set iTerm tab if within iTerm
 
 	# -------------------------------------------------------------------------
-	# BBEdit -- www.barebones.com/products/bbedit/
+	# BBEdit -- barebones.com/products/bbedit/
 	# -------------------------------------------------------------------------
 	if command -v bbedit &> /dev/null ; then
-		setenv EDITOR "bbedit bbedit --wait --resume" # use as default editor
-		alias bb='bbedit'					# use BBEdit text editor from shell
+		if [[ ${SSH_CONNECTION:-} ]] ; then
+			export EDITOR="vi"				# really vim on current macOS
+		else
+			export EDITOR="bbedit --wait --resume"
+		fi
+		alias bb='bbedit'					# use BBEdit with less keystrokes
+		alias diff='bbdiff'					# use BBEdit to show file differences
+	fi
+
+	# -------------------------------------------------------------------------
+	# Gas Mask (hosts file manager) -- github.com/2ndalpha/gasmask
+	# -------------------------------------------------------------------------
+	MASK='/Applications/Gas Mask.app/Contents/MacOS/Gas Mask'
+	if [ -x "$MASK" &> /dev/null ] ; then
+		alias mask="sudo -b \"$MASK\""
+	fi
+
+	# -------------------------------------------------------------------------
+	# Sublime Text -- sublimetext.com
+	# -------------------------------------------------------------------------
+	_subl=''
+	SUBL="/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl"
+	if [ -e "$SUBL" ] ; then _subl="$SUBL" ;
+	elif [ -e "$HOME/$SUBL" ] ; then _subl="$HOME/$SUBL" ;
+	fi
+
+	if [ -n "$_subl" ] ; then
+		export EDITOR="$_subl --wait"		# use as the system editor
+		# shellcheck disable=SC2139			# expands when defined...
+		alias subl="$_subl"					# use directly from the command line		 
 	fi
 
 	# -------------------------------------------------------------------------
@@ -393,13 +486,18 @@ else
 	# -------------------------------------------------------------------------
 	# Miscellany
 	# -------------------------------------------------------------------------
+	alias cf='caffeinate -dims'				# prevent sleep until command done
+	alias hg='history | egrep'				# find a previous history item 
 	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
-	alias sc='shellcheck'					# syntax-check shell scripts
+	alias kurl='curl -#O'					# download file with orig filename
+	alias sc='shellcheck -x'				# syntax-check shell scripts
 	alias showpath="echo \"\${PATH//:/$'\n'}\" | sort" # PATH, line by line
+	alias sortdate='date +%Y%m%d_%H%M%S'	# more useful date format for sorting
 	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
 
 	# shellcheck disable=SC2155				# declare and assign separately...
 	export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
+	if command -v thefuck &> /dev/null ; then eval $(thefuck --alias) ; fi
 
 	# -------------------------------------------------------------------------
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
@@ -413,6 +511,108 @@ else
 		sudo launchctl remove com.opendns.osx.RoamingClientConfigUpdater
 		launchctl remove com.opendns.osx.RoamingClientMenubar
 		sudo killall OpenDNSDiagnostic &>/dev/null
+	}
+
+	# -----------------------------------------------------------------------------
+	# cd to the frontmost macOS Finder window directory
+	# -----------------------------------------------------------------------------
+	cdf () {
+		currFolderPath=$( /usr/bin/osascript <<-EOT
+			tell application "Finder"
+				try
+			set currFolder to (folder of the front window as alias)
+				on error
+			set currFolder to (path to desktop folder as alias)
+				end try
+				POSIX path of currFolder
+			end tell
+		EOT
+		)
+		# echo "Front Finder window was \"$currFolderPath\"; cd'ing..."
+		cd "$currFolderPath" || exit
+	}
+
+	# -----------------------------------------------------------------------------
+	# extract best-known archives with one command
+	# -----------------------------------------------------------------------------
+	extract () {
+		if [ -f "$1" ] ; then
+		  case "$1" in
+			*.tar.bz2)   tar xjf "$1" ;;	# tar ~ bzip2
+			*.tar.gz)    tar xzf "$1" ;;	# tar ~ gzip
+			*.bz2)       bunzip2 "$1" ;;	# bzip2
+			*.rar)       unrar e "$1" ;;	# Roshal Archive (win.rar)
+			*.gz)        gunzip "$1" ;;		# gzip
+			*.tar)       tar xf "$1" ;;		# tar
+			*.tbz2)      tar xjf "$1" ;;	# bzip2-compressed tar archive
+			*.tgz)       tar xzf "$1" ;;	# really tar.gz
+			*.zip)       unzip "$1" ;;		# zip (pkware)
+			*.Z)         uncompress "$1" ;;	# compress
+			*.7z)        7z x "$1" ;;		# 7-Zip
+			*)     echo "'$1' cannot be extracted via extract()" ;;
+			 esac
+		 else
+			 echo "'$1' is not a valid file"
+		 fi
+	}
+
+	# -----------------------------------------------------------------------------
+	# make backups into a local directory before you're ready for a git commit.
+	# add a datestamp between the filename and extension so you can still open file.
+	# -----------------------------------------------------------------------------
+	#bu () { mkdir -p bak ; cp "$1" $(basename "$1")-$(date +%Y%m%d%H%M).backup ; }
+	bak () {
+		bkdir='./bak'						# write backups in your dir
+		dn="$( dirname "$1" )"				# /path/to/file --> /path/to
+		bn="$( basename "$1" )"				# /path/to/file --> file
+		fn="${bn%.*}"						# filename: a.b.c.xyz --> a.b.c
+		ex="${bn##*.}"						# extension: a.b.c.xyz --> xyz
+
+		if [ ! "$1" ] ; then				# did you pass me a anything to backup?
+			echo "usage: $0 [ file | directory ]"
+			return							# nope. get it right, you!
+		elif [ ! -w "$dn" ] ; then			# can I put a backup here?
+			echo "$0: fatal: \"$dn\" not writable; quitting."
+			return							# nope. try again
+		elif [ ! -e "$1" ] ; then			# does the source exist?
+			echo "$0: '$1' doesn't exist; quitting."
+			return							# what are you thinking of?
+		fi
+
+		# TO-DO: l & r lowercase here and uppercased below -- WTF?
+		if [ -d "$1" ] ; then echo "DEBUG: $1 is dir"; P='/'	; L='-r' ; fi	# is dir? tweak syntax
+
+		mkdir -p "$bkdir"					# in case it doesn't exist
+		d=$( date +%Y%m%d_%H%M%S )			# allow breadcrumbing through time
+
+echo "DEBUG: fn $fn d $d ex $ex R $R L $L"
+echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
+		if ! cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R" ; then
+			echo "$bn: error occured!"
+		fi
+	}
+
+	# ------------------------------------------------------------------------------
+	# Enable a terminal window to communicate with a serial port. Disconnecting it
+	# occasionally leaves the terminal window wonky. Try:
+	#
+	# alias screenfix='reset; stty sane; tput rs1; clear; echo -e "\033c"'
+	#
+	# NOTE: you may have to type 'reset' in terminal after disconnect serial device.
+	# ------------------------------------------------------------------------------
+	# Thank you, Intel:
+	# https://software.intel.com/en-us/setting-up-serial-terminal-on-system-with-mac-os-x
+	# ------------------------------------------------------------------------------
+	serial() {
+		ports=$( ls /dev/cu.usbserial-* )		# get the USB serial port(s)
+		numPorts=$( echo "$ports" | wc -l )		# count the number of ports found
+
+		if (( $(( numPorts )) != 1 )) ; then	# which one? we can't read your mind
+			echo "$0: fatal: expected to find 1 usb serial port, found $((numPorts)); quitting."
+			exit								# we give up
+		else
+			screen "$ports" 115200 -L			# unambiguous; do the serial thing
+		fi
 	}
 
 	# -------------------------------------------------------------------------
@@ -444,7 +644,7 @@ else
 	# -------------------------------------------------------------------------
 	# Load RVM into a shell session _as a function_
 	# shellcheck source=/Users/michael.sattler/.rvm/scripts/rvm
-#	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+	[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
 
 	export rvm_bash_nounset=${rvm_bash_nounset:-} # initialize if unbound variable
 	export rvm_error_clr=${rvm_error_clr:-}	# initialize if unbound variable
