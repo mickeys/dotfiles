@@ -38,6 +38,7 @@ export BLOCKSIZE=1k							# default blocksize for ls, df, du
 alias c='clear'								# clear terminal screen
 alias df='df -h'							# show human-readable sizes
 alias du='du -ch'							# human-readable with grand total
+alias dv='dirs -v'							# show directory stack in rows
 alias j='jobs -l'							# show background tasks (jobs)
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias pd='pushd'							# manipulate directory stack
@@ -109,6 +110,10 @@ fi
 # =============================================================================
 if command -v less &> /dev/null ; then export PAGER='less' ; else export PAGER='more' ; fi
 
+if command -v ffmpeg &> /dev/null ; then
+	alias mp3cat='ffmpeg -f concat -safe 0 -i <(for f in ./*.mp3; do echo "file $PWD/$f"; done) -c copy output.mp3'
+fi
+
 mkcd() { if [ $# != 1 ]; then echo "Usage: mkcd DIR" else mkdir -p "$1" && cd "$1" || exit; fi }
 up() { cd "$(eval printf '../'%.0s '{1..$1}')" || exit ; } # go up $1 number of directories
 
@@ -159,7 +164,7 @@ if [[ $HOSTNAME == ip-* ]] ; then			# vagrant hosts = 'ip-12-34-56-78'
 	_BRANCH="\[\033[01;31m\]$(git branch 2>/dev/null | cut -f2 -d\* -s)\[\033[01;32m\]"
 	_PROMPT="\[\033[38;5;2m\]\\$\[$(tput sgr0)\]"
 
-	export PS1="$_ELAPS $_HOST $_DIR $_PROMPT "
+	export PS1="$_ELAPS $_HOST $_DIR $_BRANCH $_PROMPT "
 
 else
 
@@ -188,7 +193,8 @@ else
 #	alias gl='git log --pretty=format:" ~ %s (%cr)" --no-merges'
 	alias gl='git log --no-merges --date=short --pretty=format:"| %cd | %s [%an]"'
 	alias go='git remote show origin'
-	alias gp='git push -u origin master'	# send changes upstream
+#	alias gp='git push -u origin master'	# send changes upstream
+	alias gp='git push origin HEAD'			# send changes upstream
 	alias gs='git status'					# summarize; you may like --short
 	alias gsl='git stash list'				# git-stash(1)
 	alias gsp='git stash pop'				# git-stash(1)
@@ -257,10 +263,10 @@ else
 		export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" # for pkg-config
 	fi
 
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	# Bash-completion (via homebrew) presents options to the user when the Tab
 	# key is pressed. Read github.com/bobthecow/git-flow-completion
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	if [[ -n ${_BREW-} ]] && brew ls --versions bash-completion > /dev/null; then
 		# shellcheck source=/usr/local/opt/git/etc/bash_completion.d/git-completion.bash
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-completion.bash
@@ -268,9 +274,9 @@ else
 		source "$( brew --prefix git )"/etc/bash_completion.d/git-prompt.sh
 	fi
 
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	# Homebrew OpenSSL required environmental variables for gem bundler.
-	# =========================================================================
+	# -------------------------------------------------------------------------
 	if [[ -n ${_BREW-} ]] && brew ls --versions openssl > /dev/null; then
 		_BREW_OPENSSL="$(brew --prefix openssl)"
 		export LDFLAGS=-L"${_BREW_OPENSSL}/lib"
@@ -278,6 +284,18 @@ else
 		# For pkg-config to find this software you may need to set:
 		export PKG_CONFIG_PATH="${_BREW_OPENSSL}lib/pkgconfig"
 	fi
+
+	# -------------------------------------------------------------------------
+	# Test 'net connection to local machines...
+	# -------------------------------------------------------------------------
+	net () { nc -dznw1 ${1:-8.8.8.8} ${2:-53} ; }	# 53=DNS, 8.8.8.8=google
+	png () { i='' ; h="$1" ; n="$2" ;
+		if [[ $n && ${n-_} ]] ; then i="-i $n" ; fi ;
+		c="ping -A $i $h | grep -oP 'time=\K(\d*)\.\d*'" ; # cut -d '=' -f4 ;
+		echo $c
+		eval $c
+	}
+	alias pgg='png 8.8.8.8 3'				# Google DNS nameserver
 
 	# -------------------------------------------------------------------------
 	# Set the terminal prompt.
@@ -359,7 +377,12 @@ else
 	if [ ! -d "$_LOCAL_CHEDDAR" ] ; then
 		echo "warning: not finding local cheddar at \"${_LOCAL_CHEDDAR/$HOME/\~}\""
 	else
-		alias cheddar="cd \$_LOCAL_CHEDDAR"	# mimic vagrant command
+		# shortcut to top of the automated tests
+		alias cheddar="cd \$_LOCAL_CHEDDAR"		# mimic the vagrant command
+		# shortcut to frontier-specific tests
+		alias frontier="cd \$_LOCAL_CHEDDAR/spec/mobile_api/frontier/"
+		# headless chrome webdriver (needed to run automated tests locally)
+		alias headless="cd \$_LOCAL_CHEDDAR/util/ ; ./run_standalone_webdriver.sh"
 	fi
 
 	# if ( remote-checking-wanted and network-is-present ) check remote
@@ -453,7 +476,8 @@ else
 	# Gas Mask (hosts file manager) -- github.com/2ndalpha/gasmask
 	# -------------------------------------------------------------------------
 	MASK='/Applications/Gas Mask.app/Contents/MacOS/Gas Mask'
-	if [ -x "$MASK" &> /dev/null ] ; then
+	if [ -x "$MASK" ] ; then
+		# shellcheck disable=SC2139
 		alias mask="sudo -b \"$MASK\""
 	fi
 
@@ -497,7 +521,7 @@ else
 
 	# shellcheck disable=SC2155				# declare and assign separately...
 	export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
-	if command -v thefuck &> /dev/null ; then eval $(thefuck --alias) ; fi
+	if command -v thefuck &> /dev/null ; then eval "$(thefuck --alias)" ; fi
 
 	# -------------------------------------------------------------------------
 	# Cisco Umbrella roaming client - resetting to route around occasional issue
@@ -614,6 +638,13 @@ echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
 			screen "$ports" 115200 -L			# unambiguous; do the serial thing
 		fi
 	}
+
+	# -------------------------------------------------------------------------
+	# to avoid xvfb "not found on your system" error when running chrome-driver
+	# -------------------------------------------------------------------------
+	if [ -e /usr/local/opt/libxml2/bin ] ; then
+		export PATH="/usr/local/opt/libxml2/bin:$PATH"
+	fi
 
 	# -------------------------------------------------------------------------
 	# Remove duplicate $PATH entries.
