@@ -39,6 +39,7 @@ For a thoughtful, hard-core look at dotfile management, visit <http://dotfiles.g
 
 | filename        | purpose |
 | ------------- |------------- |
+| .bash-ck      | CK-centric bash run-commands file for dealing with local (laptop) and remote (vagrant) instances. |
 | .bash_profile   | Primary workhorse for customizing your bash experience. My `.bashrc_profile` includes a test yoke, which you can switch on to validate the internal functions I've written. I'm a quality assurance software engineer, and I'm really proud of giving this file the full software reliability treatment. |
 | .gitconfig | `git` configuration |
 | .gitignore | Local additions for things `git` should ignore, extending `.gitignore_global`. |
