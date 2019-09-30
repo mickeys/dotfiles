@@ -42,7 +42,8 @@ alias dv='dirs -v'							# show directory stack in rows
 alias j='jobs -l'							# show background tasks (jobs)
 alias lr='ls -R | grep ":$" | sed -e '\''s/:$//'\'' -e '\''s/[^-][^\/]*\//--/g'\'' -e '\''s/^/   /'\'' -e '\''s/-/|/'\'' | $PAGER' # lr ~ fully-recursive directory listing
 alias pd='pushd'							# manipulate directory stack
-alias td='pushd $(mktemp -d)'				# create a temp dir and cd into it
+alias pv='echo -e ${PATH//:/\\n} | sort | uniq' # show $PATH one line per entry
+alias td='pushd $(mktemp -d)'				# create a temp dir and pushd to it
 alias wget='wget -c'						# resume transfers by default
 
 # =============================================================================
@@ -106,15 +107,37 @@ else
 fi
 
 # =============================================================================
+# ffmpeg
+# =============================================================================
+if command -v ffmpeg &> /dev/null ; then
+	# -------------------------------------------------------------------------
+	# concatenate mp3s
+	# -------------------------------------------------------------------------
+	alias mp3cat='ffmpeg -f concat -safe 0 -i <(for f in ./*.mp3; do echo "file $PWD/$f"; done) -c copy concatenated.mp3'
+
+	# -------------------------------------------------------------------------
+	# vsplit "original.mp4" "$(( 1*59 ))"
+	# -------------------------------------------------------------------------
+	vsplit() { segment_time=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$1" -c:v libx264 -crf 22 -map 0 -segment_time $segment_time -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment segment_%03d.mp4 ; }
+
+	# -------------------------------------------------------------------------
+	# vseg "movie.mp4" "00:00:09" "00:00:12"
+	# 1. ffmpeg force key-frames for the requested segment
+	# 2. ffmpeg accurately cut the segment without re-encoding
+	# -------------------------------------------------------------------------
+	#ts2sec() { gdate -d"$1" +%s; }	# timestamp "HH:MM:SS" to seconds
+	#vseg() { local SRC="$1" ; local START="$2" ; local END="$3" ; local SPAN="$(($( ts2sec "$END" )-$( ts2sec "$START" ) ))" ; local OUT="${START//:/_} to ${END//:/_}.${SRC##*.}" ; ffmpeg -i "$SRC" -force_key_frames $START,$END wip.mp4 ; ffmpeg -ss $START -i wip.mp4 -t $SPAN -vcodec copy -acodec copy -y "$OUT" ; ls -l "$SRC" wip.mp4 "$OUT" ; }
+
+	ts2sec() { s=(${1//:/ }) ; ss=$(((${s[0]}*60*60)+(${s[1]}*60)+${s[2]})) ; echo $ss ;}
+	vseg() { SRC="$1" ; START="$2" ; END="$3" ; SPAN="$(($( ts2sec "$END" )-$( ts2sec "$START" ) ))" ; OUT="${START//:/_} to ${END//:/_}.${SRC##*.}" ; T="$(mktemp video_XXXX)" || exit 1 ; WIP="$T.${SRC##*.}" ; mv "$T" "$WIP" ; ffmpeg -i "$SRC" -force_key_frames "$START,$END" -y "$WIP" ; echo ; ffmpeg -ss "$START" -i "$WIP" -t "$SPAN" -vcodec copy -acodec copy -y "$OUT" ; rm "$WIP" ; ls -l "$SRC" "$OUT" ; }
+fi
+
+# =============================================================================
 # Miscellaneous common things.
 # =============================================================================
 if command -v less &> /dev/null ; then export PAGER='less' ; else export PAGER='more' ; fi
 
-if command -v ffmpeg &> /dev/null ; then
-	alias mp3cat='ffmpeg -f concat -safe 0 -i <(for f in ./*.mp3; do echo "file $PWD/$f"; done) -c copy output.mp3'
-fi
-
-mkcd() { if [ $# != 1 ]; then echo "Usage: mkcd DIR" else mkdir -p "$1" && cd "$1" || exit; fi }
+mkcd() { if [ $# != 1 ]; then echo "Usage: mkcd DIR" else mkdir -p "$1" && pushd "$1" || exit; fi }
 up() { cd "$(eval printf '../'%.0s '{1..$1}')" || exit ; } # go up $1 number of directories
 
 export IGNOREEOF="2"						# must ctrl-D twice to exit shell
@@ -175,6 +198,19 @@ else
 	alias wls='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport scan'
 	alias wjoin='networksetup -setairportnetwork en0' #  WIFI_SSID WIFI_PASSWORD
 
+	# macOS audio levels
+	alias mute='sudo osascript -e "set Volume 0"'
+	alias loud='sudo osascript -e "set Volume 10"'
+	alias quiet='sudo osascript -e "set Volume 3"'
+
+	# macOS video levels
+	if command -v brightness > /dev/null ; then	# if brew brightness is installed
+		alias bright='brightness 1.0'
+		alias dim='brightness 0.3'
+		alias black='brightness 0.1'
+		alias howbright='brightness -l'
+	fi
+
 	# -------------------------------------------------------------------------
 	# git version control system (git-scm.com)
 	#
@@ -185,11 +221,12 @@ else
 	# git config --global alias.loa 'log --graph --oneline --all' # visualization alias
 	# -------------------------------------------------------------------------
 	complete -o default -o nospace -F _git g # autocomplete for 'g' as well
-	ga() { git add "$1"\ ; }				# add files to be tracked
+#	ga() { git add "$1" ; }				# add files to be tracked
 	gc() { git commit -m "$@" ; }			# commit changes locally
 	keysx() { tr '[:upper:]' '[:lower:]' < "$1" | sort | uniq | wc -l ; }
 
 	alias g='git'							# save 66% of typing
+	alias ga='git add'
 	alias gb='git branch'					# so many parallel universes :-)
 	alias gd='git difftool'					# see what happened
 	alias gh='git log --follow '			# git history for a file
@@ -219,7 +256,7 @@ else
 		alias brewski='brew -v update && brew -v upgrade && brew -v cleanup; brew -v doctor'
 		alias brew_installed='brew leaves'	# top-level installed packages
 		alias brew_versions='brew list --versions'
-		export PATH="/usr/local/sbin:$PATH"
+		export PATH="/usr/local/bin:$PATH"
 		_BREW=1								# remember: homebrew is installed
 	else
 		unset _BREW							# remember: homebrew not installed
@@ -395,7 +432,8 @@ else
 	full_width_rule () {
 		printf -v _hr "%*s" $(tput cols) && echo -e ${_hr// /${1--}}
 	}
-	alias d='full_width_rule "\033[31;1;31m*"'
+	alias d='full_width_rule "\033[31;1;31m*"' # can't turn color off :-/
+	alias d='full_width_rule \#'
 
 	# -------------------------------------------------------------------------
 	# Keep just one ssh-agent running in a multi-tab environment, per
@@ -439,24 +477,26 @@ else
 	if [ ! -d "$_LOCAL_CHEDDAR" ] ; then
 		echo "warning: not finding local cheddar at \"${_LOCAL_CHEDDAR/$HOME/\~}\""
 	else
-		# work-related shortcuts to frequently-visited directories
-		alias aranya="cd $HOME/git-repos/me/aranya"
-		alias cheddar="cd \$_LOCAL_CHEDDAR"		# mimic the vagrant command
-		alias graphql="cd \$_LOCAL_CHEDDAR/spec/graphql/credit_cards/marketplace/"
-		alias sheriff="cd ${HOME}/git-repos/ck/sheriff/scripts/"
+		# cheddar exists: work-related shortcuts to frequently-visited directories
+		alias cheddar="pushd \$_LOCAL_CHEDDAR"		# mimic the vagrant command
+		alias graphql="pushd \$_LOCAL_CHEDDAR/spec/graphql/credit_cards/marketplace/"
 
 		# work-related tasks
 		alias mm='git-up mexit-master'
 		# start headless chrome webdriver (needed to run automated tests locally)
-		alias headless="cd \$_LOCAL_CHEDDAR/util/ ; ./run_standalone_webdriver.sh"
+		alias headless="pushd \$_LOCAL_CHEDDAR/util/ ; ./run_standalone_webdriver.sh"
 	fi
+
+	# aliases to commonly-used non-cheddar directies
+	alias aranya="pushd $HOME/git-repos/me/aranya"
+	alias sher="pushd ${HOME}/git-repos/ck/sheriff/scripts/"
 
 	# if ( remote-checking-wanted and network-is-present ) check remote
 	_NETWORK_DOWN=$(eval nc -dzw1 8.8.8.8 443 &> /dev/null)
 	_CHECK_REMOTE_CHEDDAR="true"
 
 	if [[ ${_CHECK_REMOTE_CHEDDAR:-} && ! $_NETWORK_DOWN ]] ; then
-		if ! ssh -i "$_SSHK" vagrant@"${_REMO}" test -d "$_REMO_CHEDDAR" ; then
+		if ! ssh -o ConnectTimeout=2 -i "$_SSHK" vagrant@"${_REMO}" test -d "$_REMO_CHEDDAR" ; then
 			echo "warning: not finding remote cheddar at \"$_REMO:$_REMO_CHEDDAR/\""
 		fi
 	else
@@ -592,8 +632,9 @@ else
 	# -------------------------------------------------------------------------
 	# Miscellany
 	# -------------------------------------------------------------------------
+	alias ag='alias | egrep'				# find an aliased command
 	alias cf='caffeinate -dims'				# prevent sleep until command done
-	alias hg='history | egrep'				# find a previous history item
+	alias hg='history | egrep'				# find a history item
 	alias hosts='cat /etc/hosts'			# to what exactly are you pointing?
 	alias keys='cat ~/Documents/pub_ssh_keys/* | pbcopy ; echo "$(pbpaste | wc -l) keys copied to clipboard!"'
 	alias mykey='cat ~/Documents/pub_ssh_keys/$(whoami)-id_rsa.pub | pbcopy ; echo "On clipboard."'
@@ -758,7 +799,7 @@ echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
 	# -------------------------------------------------------------------------
 	if command -v ruby &> /dev/null ; then
 
-		alias gems="cd ~/.rvm/gems/${RUBY_VERSION}/gems && ls -al"
+		alias gems="pushd ~/.rvm/gems/${RUBY_VERSION}/gems && ls -al"
 		alias rs='ruby-beautify --spaces --indent_count 2 --overwrite'
 		alias rt='ruby-beautify --tabs --indent_count 1 --overwrite'
 		alias rv='ruby -e "puts \"ruby-#{RUBY_VERSION}-p#{RUBY_PATCHLEVEL}\""'
@@ -777,6 +818,8 @@ echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
 #		export rvm_error_clr=${rvm_error_clr:-}	# initialize if unbound variable
 #		export _system_name=${_system_name:-}	# initialize if unbound variable
 #		export __rvm_sed=${__rvm_sed:-}			# initialize if unbound variable
+
+
 	fi
 fi # Local (laptop) host environment configuration section
 
@@ -791,6 +834,6 @@ export CPPFLAGS="-I/usr/local/opt/openssl/include"
 #For pkg-config to find openssl you may need to set:
 export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
 # -----------------------------------------------------------------------------
-#[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
+[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
 export PATH="/usr/local/sbin:$PATH"
-cleanPath										# get rid of duplicate path entriesexport JIRA_PWRD='Carme11a!3'
+cleanPath										# get rid of duplicate path entriese
