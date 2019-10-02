@@ -116,9 +116,15 @@ if command -v ffmpeg &> /dev/null ; then
 	alias mp3cat='ffmpeg -f concat -safe 0 -i <(for f in ./*.mp3; do echo "file $PWD/$f"; done) -c copy concatenated.mp3'
 
 	# -------------------------------------------------------------------------
-	# vsplit "original.mp4" "$(( 1*59 ))"
+	# Convert "HH:MM:SS" into seconds; used below for ffmpeg.
 	# -------------------------------------------------------------------------
-	vsplit() { segment_time=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$1" -c:v libx264 -crf 22 -map 0 -segment_time $segment_time -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment segment_%03d.mp4 ; }
+	ts2sec() { s=(${1//:/ }) ; ss=$(((${s[0]}*60*60)+(${s[1]}*60)+${s[2]})) ; echo $ss ;}
+
+	# -------------------------------------------------------------------------
+	# vsplit "original.mp4" segment_span_in_seconds # "$(( 1*59 ))"
+	# -------------------------------------------------------------------------
+	#vsplit() { segment_time=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$1" -c:v libx264 -crf 22 -map 0 -segment_time $segment_time -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment segment_%03d.mp4 ; }
+	vsplit() { SRC="$1" ; SPAN=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$SRC" -c:v libx264 -crf 22 -map 0 -segment_time $SPAN -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment "segment_%03d.${SRC##*.}" ; }
 
 	# -------------------------------------------------------------------------
 	# vseg "movie.mp4" "00:00:09" "00:00:12"
@@ -128,9 +134,40 @@ if command -v ffmpeg &> /dev/null ; then
 	#ts2sec() { gdate -d"$1" +%s; }	# timestamp "HH:MM:SS" to seconds
 	#vseg() { local SRC="$1" ; local START="$2" ; local END="$3" ; local SPAN="$(($( ts2sec "$END" )-$( ts2sec "$START" ) ))" ; local OUT="${START//:/_} to ${END//:/_}.${SRC##*.}" ; ffmpeg -i "$SRC" -force_key_frames $START,$END wip.mp4 ; ffmpeg -ss $START -i wip.mp4 -t $SPAN -vcodec copy -acodec copy -y "$OUT" ; ls -l "$SRC" wip.mp4 "$OUT" ; }
 
-	ts2sec() { s=(${1//:/ }) ; ss=$(((${s[0]}*60*60)+(${s[1]}*60)+${s[2]})) ; echo $ss ;}
-	vseg() { SRC="$1" ; START="$2" ; END="$3" ; SPAN="$(($( ts2sec "$END" )-$( ts2sec "$START" ) ))" ; OUT="${START//:/_} to ${END//:/_}.${SRC##*.}" ; T="$(mktemp video_XXXX)" || exit 1 ; WIP="$T.${SRC##*.}" ; mv "$T" "$WIP" ; ffmpeg -i "$SRC" -force_key_frames "$START,$END" -y "$WIP" ; echo ; ffmpeg -ss "$START" -i "$WIP" -t "$SPAN" -vcodec copy -acodec copy -y "$OUT" ; rm "$WIP" ; ls -l "$SRC" "$OUT" ; }
-fi
+	# -------------------------------------------------------------------------
+	# Accurately cut a segment from a video with two passes of ffmpeg.
+	#
+	# Usage: vseg movie.mp4 start_timestamp end_timestamp
+	# -------------------------------------------------------------------------
+	vseg() {
+		# Put the supplied parameters into easier-to-read variables.
+		SRC="$1" ; START="$2" ; END="$3"
+
+		# Calculate the segment time (in seconds) requested.
+		SPAN="$(($( ts2sec "$END" )-$( ts2sec "$START" ) ))"
+
+		# Generate an output filename in macOS-friendly format; replace the
+		# colons with underscores and use the same filename  extension as the
+		# source video such that an input of "vseg movie.mp4 00:00:00 00:01:00"
+		# results in an output filename # of "00_00_00 to 00_01_00.mp4".
+		OUT="${START//:/_} to ${END//:/_}.${SRC##*.}"
+
+		# Generate a temporary working file; add the approprite suffix.
+		T="$(mktemp video_XXXX)" || exit 1
+		WIP="$T.${SRC##*.}"
+		mv "$T" "$WIP"
+
+		# Force regeneration of key frames within the desired segment to enable
+		# an exact segment cut (with the next command); place into $WIP.
+		ffmpeg -i "$SRC" -force_key_frames "$START,$END" -y "$WIP"
+
+		# Cut exactly the segment requested into $OUT.
+		ffmpeg -ss "$START" -i "$WIP" -t "$SPAN" -vcodec copy -acodec copy -y "$OUT"
+
+		# Remove the work-in-progress file. List the input and output files.
+		rm "$WIP"
+		ls -l "$SRC" "$OUT"
+	}
 
 # =============================================================================
 # Miscellaneous common things.
@@ -836,4 +873,4 @@ export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
 # -----------------------------------------------------------------------------
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
 export PATH="/usr/local/sbin:$PATH"
-cleanPath										# get rid of duplicate path entriese
+cleanPath										# get rid of duplicate path entries
