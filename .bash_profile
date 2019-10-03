@@ -118,13 +118,13 @@ if command -v ffmpeg &> /dev/null ; then
 	# -------------------------------------------------------------------------
 	# Convert "HH:MM:SS" into seconds; used below for ffmpeg.
 	# -------------------------------------------------------------------------
-	ts2sec() { s=(${1//:/ }) ; ss=$(((${s[0]}*60*60)+(${s[1]}*60)+${s[2]})) ; echo $ss ;}
+	ts2sec() { s=("${1//:/ }") ; ss=$(((${s[0]}*60*60)+(${s[1]}*60)+${s[2]})) ; echo $ss ;}
 
 	# -------------------------------------------------------------------------
 	# vsplit "original.mp4" segment_span_in_seconds # "$(( 1*59 ))"
 	# -------------------------------------------------------------------------
 	#vsplit() { segment_time=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$1" -c:v libx264 -crf 22 -map 0 -segment_time $segment_time -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment segment_%03d.mp4 ; }
-	vsplit() { SRC="$1" ; SPAN=$( gdate -d@${2} -u +%H:%M:%S ) ; ffmpeg -i "$SRC" -c:v libx264 -crf 22 -map 0 -segment_time $SPAN -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment "segment_%03d.${SRC##*.}" ; }
+	vsplit() { SRC="$1" ; SPAN=$( gdate -d@"${2}" -u +%H:%M:%S ) ; ffmpeg -i "$SRC" -c:v libx264 -crf 22 -map 0 -segment_time "$SPAN" -g 9 -sc_threshold 0 -force_key_frames "expr:gte(t,n_forced*9)" -reset_timestamps 1 -f segment "segment_%03d.${SRC##*.}" ; }
 
 	# -------------------------------------------------------------------------
 	# vseg "movie.mp4" "00:00:09" "00:00:12"
@@ -168,6 +168,7 @@ if command -v ffmpeg &> /dev/null ; then
 		rm "$WIP"
 		ls -l "$SRC" "$OUT"
 	}
+fi
 
 # =============================================================================
 # Miscellaneous common things.
@@ -320,6 +321,7 @@ else
 	# -------------------------------------------------------------------------
 	_EMACS='/Applications/Emacs.app/Contents/MacOS/Emacs'
 	if [ -e "$_EMACS" ] ; then
+		#shellcheck disable=SC2139
 		alias e="$_EMACS -nw"
 	fi
 
@@ -375,12 +377,12 @@ else
 	# -------------------------------------------------------------------------
 	# Test 'net connection to local machines...
 	# -------------------------------------------------------------------------
-	net () { nc -dznw1 ${1:-8.8.8.8} ${2:-53} ; }	# 53=DNS, 8.8.8.8=google
+	net () { nc -dznw1 "${1:-8.8.8.8}" "${2:-53}" ; }	# 53=DNS, 8.8.8.8=google
 	png () { i='' ; h="$1" ; n="$2" ;
 		if [[ $n && ${n-_} ]] ; then i="-i $n" ; fi ;
 		c="ping -A $i $h | grep -oP 'time=\K(\d*)\.\d*'" ; # cut -d '=' -f4 ;
-		echo $c
-		eval $c
+		echo "$c"
+		eval "$c"
 	}
 	alias pgg='png 8.8.8.8 3'				# Google DNS nameserver
 
@@ -388,11 +390,13 @@ else
 	# Set the terminal prompt.
 	# -------------------------------------------------------------------------
 	# store colors
+	#shellcheck ignore=SC2034
 	MAGENTA="\[\033[0;35m\]"
 	YELLOW="\[\033[01;33m\]"
 	BLUE="\[\033[00;34m\]"
 	LIGHT_GRAY="\[\033[0;37m\]"
 	CYAN="\[\033[0;36m\]"
+	#shellcheck ignore=SC2034
 	GREEN="\[\033[00;32m\]"
 	RED="\[\033[0;31m\]"
 	VIOLET='\[\033[01;35m\]'
@@ -467,7 +471,7 @@ else
 	# Print a red line to make it easy to scroll back to this point in terminal.
 	# -------------------------------------------------------------------------
 	full_width_rule () {
-		printf -v _hr "%*s" $(tput cols) && echo -e ${_hr// /${1--}}
+		printf -v _hr "%*s" $(tput cols) && echo -e "${_hr// /${1--}}"
 	}
 	alias d='full_width_rule "\033[31;1;31m*"' # can't turn color off :-/
 	alias d='full_width_rule \#'
@@ -525,8 +529,8 @@ else
 	fi
 
 	# aliases to commonly-used non-cheddar directies
-	alias aranya="pushd $HOME/git-repos/me/aranya"
-	alias sher="pushd ${HOME}/git-repos/ck/sheriff/scripts/"
+	alias aranya='pushd $HOME/git-repos/me/aranya'
+	alias sher='pushd $HOME/git-repos/ck/sheriff/scripts/'
 
 	# if ( remote-checking-wanted and network-is-present ) check remote
 	_NETWORK_DOWN=$(eval nc -dzw1 8.8.8.8 443 &> /dev/null)
@@ -757,7 +761,7 @@ else
 		fi
 
 		# TO-DO: l & r lowercase here and uppercased below -- WTF?
-		if [ -d "$1" ] ; then echo "DEBUG: $1 is dir"; P='/'	; L='-r' ; fi	# is dir? tweak syntax
+		if [ -d "$1" ] ; then echo "DEBUG: $1 is dir"; P='/' ; L='-r' ; fi	# is dir? tweak syntax
 
 		mkdir -p "$bkdir"					# in case it doesn't exist
 		d=$( date +%Y%m%d_%H%M%S )			# allow breadcrumbing through time
@@ -836,7 +840,7 @@ echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
 	# -------------------------------------------------------------------------
 	if command -v ruby &> /dev/null ; then
 
-		alias gems="pushd ~/.rvm/gems/${RUBY_VERSION}/gems && ls -al"
+		alias gems='pushd ~/.rvm/gems/${RUBY_VERSION}/gems && ls -al'
 		alias rs='ruby-beautify --spaces --indent_count 2 --overwrite'
 		alias rt='ruby-beautify --tabs --indent_count 1 --overwrite'
 		alias rv='ruby -e "puts \"ruby-#{RUBY_VERSION}-p#{RUBY_PATCHLEVEL}\""'
@@ -873,4 +877,4 @@ export PKG_CONFIG_PATH="/usr/local/opt/openssl/lib/pkgconfig"
 # -----------------------------------------------------------------------------
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
 export PATH="/usr/local/sbin:$PATH"
-cleanPath										# get rid of duplicate path entries
+cleanPath										# get rid of duplicate path entriese
