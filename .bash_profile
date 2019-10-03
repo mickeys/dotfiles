@@ -685,8 +685,10 @@ else
 	alias sortdate='date +%Y%m%d_%H%M%S'	# more useful date format for sorting
 	alias sshkey='ssh-keygen -l -E MD5 -f'	# fingerprint ssh key to verify
 
-	# shellcheck disable=SC2155				# declare and assign separately...
-	export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
+	if [[ -e /Library/Java/Home ]]; then
+		# shellcheck disable=SC2155			# declare and assign separately...
+		export JAVA_HOME=$(/usr/libexec/java_home) # dynamically get proper value
+	fi
 	if command -v thefuck &> /dev/null ; then eval "$(thefuck --alias)" ; fi
 
 	# --------------------
