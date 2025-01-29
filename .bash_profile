@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # +------------------------+---------------------------------------------------
-# .                        . This is a basic .bash_profile for Credit Karma. It
+# .                        . This is a basic .bash_profile for XX. It
 # .            `:-         . covers configuration for both local (laptop) and
 # .            ./:         . remote hosts (CKVM & UAT).
 # .     `...`  ./:     --` .
@@ -10,8 +10,8 @@
 # . .//        ./:.://`    . your home by `ln -s .bash_ck .bash_profile`.
 # . `//.       .///::/:`   .
 # .  -//:...-: .//`  -//`  .
-# .    .-::--. `--    .--` . Find me at https://github.com/mickeys/dotfiles/ or
-# .                        . code.corp.creditkarma.com/michael-sattler-ck/dotfiles/
+# .    .-::--. `--    .--` . Find me at https://github.com/mickeys/dotfiles/
+# .                        . 
 # +------------------------+---------------------------------------------------
 
 #set -x										# toggle debugging verbosity
@@ -22,9 +22,9 @@
 # =============================================================================
 # User-specific settings broken out to keep secret things safe.
 # =============================================================================
-_MY_SECRETS="$HOME/.my_ck_secrets"
+_MY_SECRETS="$HOME/.my_xx_secrets"
 if [ -e "$_MY_SECRETS" ] ; then
-	# shellcheck source=/Users/michael.sattler/.my_ck_secrets
+	# shellcheck source=/Users/michael.sattler/.my_xx_secrets
 	source "$_MY_SECRETS"
 else
 	echo "Configuration file \"$_MY_SECRETS\" not found."
@@ -283,8 +283,8 @@ else
 	# node package manager (npm)
 	# -------------------------------------------------------------------------
 	if command -v npm > /dev/null ; then	# if npm is installed
-		alias gqlserv="pushd \$HOME/git-repos/ck/cinf_graphiql-app/ ; npm run hot-dev-server"
-		alias gql="pushd \$HOME/git-repos/ck/cinf_graphiql-app/ ; npm run start-hot"
+		alias gqlserv="pushd \$HOME/git-repos/xx/cinf_graphiql-app/ ; npm run hot-dev-server"
+		alias gql="pushd \$HOME/git-repos/xx/cinf_graphiql-app/ ; npm run start-hot"
 	fi
 
 	# -------------------------------------------------------------------------
@@ -499,8 +499,8 @@ else
 	# -------------------------------------------------------------------------
 	# Which SSH private key to be used for authenticating to remotes?
 	# -------------------------------------------------------------------------
-	if [ -f "$HOME/.ssh/github-ck" ] ; then
-		export _SSHK="$HOME/.ssh/github-ck"	# CK-specific private SSH key
+	if [ -f "$HOME/.ssh/github-xx" ] ; then
+		export _SSHK="$HOME/.ssh/github-xx"	# XX-specific private SSH key
 	else
 		export _SSHK="$HOME/.ssh/id_rsa"	# default private SSH key
 	fi
@@ -513,7 +513,7 @@ else
 	# Set up and sanity-check local and remote cheddar git trees.
 	# -------------------------------------------------------------------------
 	export _REMO_CHEDDAR="/var/www/git-repos/automation/cheddar"
-	export _LOCAL_CHEDDAR="$HOME/git-repos/ck/automation/cheddar"
+	export _LOCAL_CHEDDAR="$HOME/git-repos/xx/automation/cheddar"
 
 	if [ ! -d "$_LOCAL_CHEDDAR" ] ; then
 		echo "warning: not finding local cheddar at \"${_LOCAL_CHEDDAR/$HOME/\~}\""
@@ -530,7 +530,7 @@ else
 
 	# aliases to commonly-used non-cheddar directies
 	alias aranya='pushd $HOME/git-repos/me/aranya'
-	alias sher='pushd $HOME/git-repos/ck/sheriff/scripts/'
+	alias sher='pushd $HOME/git-repos/xx/sheriff/scripts/'
 
 	# if ( remote-checking-wanted and network-is-present ) check remote
 	_NETWORK_DOWN=$(eval nc -dzw1 8.8.8.8 443 &> /dev/null)
@@ -692,7 +692,7 @@ else
 	if command -v thefuck &> /dev/null ; then eval "$(thefuck --alias)" ; fi
 
 	# --------------------
-	# Credit Karma-centric
+	# XX-centric
 	# --------------------
 	# RSpec / Cheddar shortcuts
 	RS_ARGS='--format documentation --format progress'
@@ -831,9 +831,9 @@ echo "DEBUG: " cp "$L" "$1" "$bkdir/${fn}_${d}.${ex}$R"
 	export PATH								# share and enjoy!
 
 	# -------------------------------------------------------------------------
-	# /Users/michael.sattler/git-repos/ck/sheriff/scripts/sheriff.sh
+	# /Users/michael.sattler/git-repos/xx/sheriff/scripts/sheriff.sh
 	# -------------------------------------------------------------------------
-	export PATH="$PATH:$HOME/git-repos/ck/sheriff/scripts"
+	export PATH="$PATH:$HOME/git-repos/xx/sheriff/scripts"
 	alias sheriff='sheriff.sh cc'
 
 	# -------------------------------------------------------------------------
